@@ -282,7 +282,7 @@ stateDiagram-v2
     DEPENDENCY_BLOCKED --> RED : All dependencies reach MERGED state
 ```
 
-The Arbiter's `state_manager.py` polls dependency states on every pipeline event (e.g., when any feature transitions to `MERGED`) and automatically unblocks waiting features.
+The Arbiter's `dependency_monitor.py` polls dependency states on every pipeline event (e.g., when any feature transitions to `MERGED`) and automatically unblocks waiting features.
 
 #### D. Conflict Detection: Shared File Registry
 
@@ -314,8 +314,8 @@ When the Developer Agent commits changes in Stage 3, the Arbiter's `pre-commit` 
 
 #### F. Arbiter Script Updates
 
-1. **`state_manager.py`** — Add `check-dependencies --req-id REQ-NNN` command that evaluates the dependency gate and sets `DEPENDENCY_BLOCKED` or clears it.
-2. **`dependency_monitor.py`** (new script) — Polls `feature_registry` on every `MERGED` event and unblocks waiting features automatically.
+1. **`dependency_monitor.py`** (new script) — Polls `feature_registry` on every `MERGED` event and unblocks waiting features automatically.
+2. **`dependency_monitor.py`** — Add `check-dependencies --req-id REQ-NNN` command that evaluates the dependency gate and sets `DEPENDENCY_BLOCKED` or clears it.
    - CLI: `python dependency_monitor.py check-unblock`
 3. **`gherkin_validator.py`** — Add `@depends-on` tag parsing and registry cross-reference validation.
 
@@ -363,6 +363,7 @@ stateDiagram-v2
     INTEGRATION_RED --> INTEGRATION_CHECK : Developer Agent fixes integration issue
     INTEGRATION_CHECK --> REVIEW_PENDING : All integration tests pass
 
+    REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt during review
     REVIEW_PENDING --> MERGED : HITL 2 - Lead Engineer approves PR
     MERGED --> INIT : Next feature cycle begins
 
@@ -394,7 +395,6 @@ stateDiagram-v2
 
 | Script | Existing / New | Gap Addressed | Key New Capability |
 |---|---|---|---|
-| `state_manager.py` | Existing — Extended | All three | New states: `FEATURE_GREEN`, `REGRESSION_RED`, `INTEGRATION_RED`, `INTEGRATION_CHECK`, `DEPENDENCY_BLOCKED`; `check-dependencies` command |
 | `test_orchestrator.py` | Existing — Extended | Non-Regression | Two-phase execution: `--scope feature` and `--scope full`; writes `feature_suite_pass_ratio` and `full_suite_pass_ratio` |
 | `integration_test_runner.py` | **New** | Integration Tests | Runs `*.integration.spec.ts` files; writes `integration_state` to `state.json` |
 | `dependency_monitor.py` | **New** | Cross-Feature Deps | Polls `feature_registry`; auto-unblocks `DEPENDENCY_BLOCKED` features when deps reach `MERGED` |
@@ -491,9 +491,9 @@ These additions slot into the existing implementation strategy without disruptin
 | Sprint | Layer | Gap Fix | Deliverable |
 |---|---|---|---|
 | Sprint 0 | Layer 1 | All three (rules only) | Add `INT-1`, `REG-1`, `REG-2`, `DEP-1`, `DEP-2`, `DEP-3` to `.clinerules`; add `@depends-on` tag convention to `.roomodes` Architect Agent prompt |
-| Sprint 1 | Layer 2 | Non-Regression | Extend `test_orchestrator.py` with `--scope feature` and `--scope full`; add `FEATURE_GREEN` and `REGRESSION_RED` to `state_manager.py` |
-| Sprint 1 | Layer 2 | Integration Tests | Author `integration_test_runner.py`; add `INTEGRATION_CHECK` and `INTEGRATION_RED` to `state_manager.py` |
-| Sprint 1 | Layer 2 | Cross-Feature Deps | Author `dependency_monitor.py`; extend `state_manager.py` with `check-dependencies`; extend `gherkin_validator.py` with `@depends-on` parsing |
+| Sprint 1 | Layer 2 | Non-Regression | Extend `test_orchestrator.py` with `--scope feature` and `--scope full`; writes `FEATURE_GREEN` and `REGRESSION_RED` states |
+| Sprint 1 | Layer 2 | Integration Tests | Author `integration_test_runner.py`; writes `INTEGRATION_CHECK` and `INTEGRATION_RED` states |
+| Sprint 1 | Layer 2 | Cross-Feature Deps | Author `dependency_monitor.py` with `check-dependencies`; extend `gherkin_validator.py` with `@depends-on` parsing |
 | Sprint 2 | Layer 2b | All three | Git hooks: `pre-commit` runs regression check; `post-merge` triggers `dependency_monitor.py check-unblock` |
 
 ---

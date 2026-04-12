@@ -23,6 +23,10 @@ The latest `Draft.md` incorporates three major architectural additions (Integrat
 | `feature_registry` and `file_ownership` in `state.json` | `01-system-overview.md` | Diagram 20 |
 | Pipeline Parallelism Rule (Stage 1 parallel, 2–4 single-threaded) | `02-phase0-and-pipeline.md` | Diagram 4 |
 | `INTEGRATION GREEN` gate before HITL 2 | `02-phase0-and-pipeline.md`, `04-adhoc-and-pivot.md` | Diagrams 4, 18 |
+| `IDEA-NNN` → `REQ-NNN` traceability ID naming (Diagram 5) | `02-phase0-and-pipeline.md` | Diagram 5 |
+| `IDEA-NNN` → `REQ-NNN` traceability ID naming (Diagram 14) | `05-memory-sessions-and-infra.md` | Diagram 14 |
+| `REVIEW_PENDING --> PIVOT_IN_PROGRESS` missing transition | `03-tdd-and-state.md` | Diagram 7 |
+| `state_manager.py` removal from diagrams | `01-system-overview.md`, `05-memory-sessions-and-infra.md` | Diagrams 16, 20 |
 
 ---
 
@@ -109,6 +113,7 @@ stateDiagram-v2
 
     INTEGRATION_CHECK --> REVIEW_PENDING : All integration tests pass\nSecurity scan triggered
 
+    REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt during review
     REVIEW_PENDING --> MERGED : HITL Gate 2\nLead Engineer approves PR\nMerge to develop
 
     MERGED --> INIT : Next feature cycle begins\nstate reset
@@ -279,12 +284,13 @@ flowchart TD
 
 #### Diagram 20 — Full System Topology: All Components
 
-**Current ARBITER_LAYER** lists 6 scripts:
+**Current ARBITER_LAYER** lists 7 scripts (including `state_manager.py` which is being removed):
 `state_manager.py`, `test_orchestrator.py`, `gherkin_validator.py`, `memory_rotator.py`, `audit_logger.py`, `crash_recovery.py`
 
-**Required additions:**
-1. Add `integration_test_runner.py` to `ARBITER_LAYER`
-2. Add `dependency_monitor.py` to `ARBITER_LAYER`
+**Required changes:**
+1. Remove `state_manager.py` from ARBITER_LAYER (distributed state management — no central script)
+2. Add `integration_test_runner.py` to `ARBITER_LAYER`
+3. Add `dependency_monitor.py` to `ARBITER_LAYER`
 
 **Current FILE_LAYER** has `TESTS[tests/\nTest specification files]`
 
@@ -407,10 +413,10 @@ with:
 
 #### Diagram 16 — Separation of Domains: Engine vs Payload (graph TB)
 
-**Current ENGINE subgraph** lists 6 Arbiter scripts in `E3`:
+**Current ENGINE subgraph** lists 6 Arbiter scripts in `E3` (including `state_manager.py` which is being removed):
 `state_manager.py, test_orchestrator.py, gherkin_validator.py, memory_rotator.py, audit_logger.py, crash_recovery.py`
 
-**Required change:** Add `integration_test_runner.py` and `dependency_monitor.py` to the script list in `E3`.
+**Required change:** Remove `state_manager.py`. Add `integration_test_runner.py` and `dependency_monitor.py` to the script list in `E3`.
 
 **Current PAYLOAD subgraph** has `P2[tests/\nTest specification files]`
 
@@ -427,10 +433,10 @@ audit_logger.py, crash_recovery.py
 ```
 with:
 ```
-state_manager.py, test_orchestrator.py
-integration_test_runner.py, dependency_monitor.py
-gherkin_validator.py, memory_rotator.py
-audit_logger.py, crash_recovery.py
+test_orchestrator.py, integration_test_runner.py
+dependency_monitor.py, gherkin_validator.py
+memory_rotator.py, audit_logger.py
+crash_recovery.py
 ```
 
 Replace `P2` node:

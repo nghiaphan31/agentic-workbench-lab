@@ -26,6 +26,15 @@
 
 ---
 
+## ADR-003: Distributed State Management — No Central state_manager.py
+
+- **Date:** 2026-04-12
+- **Context:** The spec and diagrams listed `state_manager.py` as a dedicated Arbiter script owning all `state.json` writes. The script was never implemented. State transitions are handled by individual scripts writing their own domain fields directly.
+- **Decision:** Remove `state_manager.py` from all spec, diagram, and naming references. Document that state management is distributed across individual Arbiter scripts. Each script is responsible for writing only its own domain fields in `state.json`.
+- **Consequences:** Simpler implementation with no central bottleneck. Risk: no single enforcement point for `state.json` schema validation. Mitigation: `pre-commit` hook validates `state.json` integrity via `last_updated_by` field inspection. `pre-push` hook blocks pushes in `RED`/`REGRESSION_RED`/`INTEGRATION_RED`/`PIVOT_IN_PROGRESS` states.
+
+---
+
 ## Adding New ADRs
 
 When a significant architectural decision is made:

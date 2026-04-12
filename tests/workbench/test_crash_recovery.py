@@ -55,7 +55,7 @@ last_heartbeat: 2026-04-12 14:00 UTC
         """UC-039: Status — No active session — fresh start"""
         state_factory()
         checkpoint = temp_workbench / "memory-bank" / "hot-context" / "session-checkpoint.md"
-        checkpoint.write_text("**status:** EMPTY", encoding="utf-8")
+        checkpoint.write_text("status: EMPTY", encoding="utf-8")
         
         exit_code, stdout, stderr = run_script("crash_recovery", "status")
         assert exit_code == 0
@@ -65,7 +65,7 @@ last_heartbeat: 2026-04-12 14:00 UTC
         """UC-040: Clear checkpoint — resets to EMPTY"""
         state_factory()
         checkpoint = temp_workbench / "memory-bank" / "hot-context" / "session-checkpoint.md"
-        checkpoint.write_text("**status:** ACTIVE\n- **session_id:** xyz\n", encoding="utf-8")
+        checkpoint.write_text("status: ACTIVE\n- session_id: xyz\n", encoding="utf-8")
         
         exit_code, stdout, stderr = run_script("crash_recovery", "clear")
         assert exit_code == 0

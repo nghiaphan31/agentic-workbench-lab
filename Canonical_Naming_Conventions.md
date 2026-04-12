@@ -58,7 +58,6 @@ These are deterministic programs owned by **The Arbiter**. Each script has exact
 
 | Canonical Script Name | What It Is NOT Called | Purpose |
 |---|---|---|
-| **`state_manager.py`** | "State script", "state.py", "gate_manager.py" | Reads/writes `state.json`; enforces state transitions |
 | **`test_orchestrator.py`** | "test_runner.py", "Test Orchestrator" (as a Roo mode) | Two-phase test execution (feature scope + full regression) |
 | **`integration_test_runner.py`** | "integration.py", "Integration Runner" (as a Roo mode) | Runs `*.integration.spec.ts` files; writes `integration_state` |
 | **`dependency_monitor.py`** | "dep_monitor.py", "Dependency Checker" | Polls `feature_registry`; auto-unblocks `DEPENDENCY_BLOCKED` features |
@@ -129,6 +128,7 @@ All states in `state.json.state`. Each state has exactly one meaning.
 | `FEATURE_GREEN` | Phase 1 (feature-scope) tests pass | No | "Feature Green", "Local Green" |
 | `REGRESSION_RED` | Phase 2 (full regression) found broken test(s) | **Yes** | "Regression", "Full Suite Failing" |
 | `GREEN` | Phase 1 + Phase 2 both pass | No | "All Green", "Suite Clean" |
+| `CLEAN` | Phase 2 full regression passed | No | Value of `regression_state` field (not a `state.json.state` value) |
 | `INTEGRATION_CHECK` | Arbiter running integration test suite | No | "Running Integration Tests" |
 | `INTEGRATION_RED` | Integration tests failing | **Yes** | "Integration Failing" |
 | `REVIEW_PENDING` | All gates passed; awaiting HITL 2 approval | No | "Ready for Review", "Pending Approval" |

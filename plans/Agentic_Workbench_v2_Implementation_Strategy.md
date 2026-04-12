@@ -184,7 +184,7 @@ This approach gives you:
    - Checks for REQ-ID tag presence
    - Parses `@depends-on` tag and cross-references REQ-IDs against `state.json.feature_registry`
    - Checks `@draft` files in `_inbox/` for structural validity (without REQ-ID requirement)
-   - CLI: `python gherkin_validator.py validate features/`
+   - CLI: `python gherkin_validator.py features/`
 
 7. **`memory_rotator.py`** — The Sprint Rotation Script
    - Applies the per-file rotation policy (Rotate / Persist / Reset) from the spec

@@ -205,8 +205,8 @@ sequenceDiagram
 
     Note over ArchAgent: No logical ambiguities remain\nContract Generation begins
 
-    ArchAgent->>ArchAgent: Assign REQ-IDs in format IDEA-NNN
-    ArchAgent->>Features: Write .feature files\nNaming: IDEA-NNN-slug.feature\nTag: @IDEA-NNN inside file
+    ArchAgent->>ArchAgent: Assign REQ-IDs in format REQ-NNN
+    ArchAgent->>Features: Write .feature files\nNaming: REQ-NNN-slug.feature\nTag: @REQ-NNN inside file
     ArchAgent->>Arbiter: Signal: feature files ready for validation
 
     Arbiter->>Features: Run Gherkin Syntax Check\nValidate Given/When/Then structure\nVerify REQ-ID tags present

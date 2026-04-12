@@ -208,31 +208,31 @@ gitGraph
    checkout develop
    commit id: "chore: setup project scaffold"
 
-   branch feature/Sprint1/IDEA-001-user-auth
-   checkout feature/Sprint1/IDEA-001-user-auth
-   commit id: "feat: IDEA-001 Gherkin contracts"
-   commit id: "test: IDEA-001 failing test suite"
-   commit id: "feat: IDEA-001 implement auth logic"
-   commit id: "feat: IDEA-001 all tests GREEN"
+   branch feature/Sprint1/REQ-001-user-auth
+   checkout feature/Sprint1/REQ-001-user-auth
+   commit id: "feat: REQ-001 Gherkin contracts"
+   commit id: "test: REQ-001 failing test suite"
+   commit id: "feat: REQ-001 implement auth logic"
+   commit id: "feat: REQ-001 all tests GREEN"
 
    checkout develop
-   merge feature/Sprint1/IDEA-001-user-auth id: "merge: IDEA-001 via PR no-ff"
+   merge feature/Sprint1/REQ-001-user-auth id: "merge: REQ-001 via PR no-ff"
 
-   branch feature/Sprint1/IDEA-002-reporting
-   checkout feature/Sprint1/IDEA-002-reporting
-   commit id: "feat: IDEA-002 Gherkin contracts"
+   branch feature/Sprint1/REQ-002-reporting
+   checkout feature/Sprint1/REQ-002-reporting
+   commit id: "feat: REQ-002 Gherkin contracts"
 
    branch lab/Sprint1/pdf-export-spike
    checkout lab/Sprint1/pdf-export-spike
    commit id: "lab: explore PDF generation options"
    commit id: "lab: prototype approach"
 
-   checkout feature/Sprint1/IDEA-002-reporting
+   checkout feature/Sprint1/REQ-002-reporting
    merge lab/Sprint1/pdf-export-spike id: "merge: lab findings into feature"
-   commit id: "feat: IDEA-002 implement reporting"
+   commit id: "feat: REQ-002 implement reporting"
 
    checkout develop
-   merge feature/Sprint1/IDEA-002-reporting id: "merge: IDEA-002 via PR no-ff"
+   merge feature/Sprint1/REQ-002-reporting id: "merge: REQ-002 via PR no-ff"
 
    branch stabilization/v1.0
    checkout stabilization/v1.0
@@ -274,8 +274,8 @@ mindmap
       develop
         Primary integration mainline
         Long-lived - never deleted
-      feature/Timebox/IDEA-NNN-slug
-        e.g. feature/Sprint1/IDEA-042-user-auth
+      feature/Timebox/REQ-NNN-slug
+        e.g. feature/Sprint1/REQ-042-user-auth
         Merges via PR with no-ff
         Never deleted after merge
       lab/Timebox/slug
@@ -299,16 +299,16 @@ mindmap
         chore-workbench - workbench engine change
         test-scope - test additions
       REQ-ID in feat commits
-        e.g. feat-auth: IDEA-001 implement login flow
+        e.g. feat-auth: REQ-001 implement login flow
     File Names
       Feature Files
-        IDEA-NNN-slug.feature
-        e.g. IDEA-042-user-authentication.feature
+        REQ-NNN-slug.feature
+        e.g. REQ-042-user-authentication.feature
         Stored in /features/ when active
         Stored in _inbox/ when @draft
       Unit Test Files
-        IDEA-NNN-slug.spec.ts
-        e.g. IDEA-042-user-authentication.spec.ts
+        REQ-NNN-slug.spec.ts
+        e.g. REQ-042-user-authentication.spec.ts
         Stored in /tests/unit/
         REQ-NNN scoped
       Integration Test Files
@@ -321,7 +321,7 @@ mindmap
         Stored in docs/conversations/
         Immutable after creation
     Internal File Tags
-      @IDEA-NNN
+      @REQ-NNN
         Traceability tag inside .feature files
         Links to REQ-ID
       @draft
@@ -361,10 +361,10 @@ Agent role definitions
 System prompts and file access constraints]
         E3[.workbench/scripts/
 Python Arbiter scripts
-state_manager.py, test_orchestrator.py
-integration_test_runner.py, dependency_monitor.py
-gherkin_validator.py, memory_rotator.py
-audit_logger.py, crash_recovery.py]
+test_orchestrator.py, integration_test_runner.py
+dependency_monitor.py, gherkin_validator.py
+memory_rotator.py, audit_logger.py
+crash_recovery.py]
         E4[.husky/ or .workbench/hooks/
 Git hooks
 pre-commit, pre-push, post-tag]

@@ -299,7 +299,6 @@ The following table maps each Arbiter script to the exact Roo permission it revo
 
 | Arbiter Script | Command Domain Revoked from Roo | Auto-Approve Pattern Removed |
 |:-------------- |:------------------------------ |:----------------------------|
-| `state_manager.py` | `state.json` read/write | *(none — state is never auto-approved)* |
 | `test_orchestrator.py` | Test suite execution | `npm test`, `npx vitest`, `pnpm test`, `pytest`, `make test` |
 | `gherkin_validator.py` | `.feature` file validation | `npx gherkin-lint`, `cucumber` |
 | `memory_rotator.py` | Memory file rotation | `rm`, `mv`, `cp` (memory-bank files) |
@@ -346,7 +345,7 @@ The following `.roo-settings.json` file defines the Phase A auto-approve allowli
 ```json
 {
   "$schema": "https://agentic-workbench.io/roo-settings.schema.json",
-  "version": "2.0",
+  "version": "2.1",
   "settings": {
     "roo-cline.allowedCommands": [
       "git log",
@@ -356,15 +355,9 @@ The following `.roo-settings.json` file defines the Phase A auto-approve allowli
       "git branch -a",
       "git log --oneline -n 20",
       "git diff --stat",
-      "npm install",
-      "pnpm install",
-      "yarn",
-      "npm ci",
-      "npx biome check --write .",
-      "npx biome lint .",
       "node --version",
-      "mkdir -p",
-      "touch",
+      "mkdir",
+      "type nul",
       "cat",
       "grep",
       "find",
@@ -589,7 +582,7 @@ stateDiagram-v2
 Standalone Python scripts run locally or via hooks to enforce the rules outside of Roo Code's control:
 
 * **State & Gate Manager:** Manages `state.json` to lock system states (e.g., RED, FEATURE_GREEN, GREEN, DEPENDENCY_BLOCKED, REGRESSION_RED, INTEGRATION_RED) and enforce progression gates. Supports `check-dependencies --req-id REQ-NNN` to evaluate the dependency gate.
-* **Test Orchestrator:** Executes test suites in two sequential phases. Phase 1: `--scope feature --req-id REQ-NNN` (feature-scope fast loop). Phase 2: `--scope full` (full regression run). Returns deterministic pass/fail metrics and writes `feature_suite_pass_ratio`, `full_suite_pass_ratio`, and `regression_state` to `state.json`.
+* **Test Orchestrator:** Executes test suites in two sequential phases. Phase 1: `--scope feature --req-id REQ-NNN` (feature-scope fast loop). Phase 2: `--scope full` (full regression run). Returns deterministic pass/fail metrics and writes `feature_suite_pass_ratio`, `full_suite_pass_ratio`, and `regression_state` to `state.json`. The `regression_state` field accepts three values: `NOT_RUN` (initial), `CLEAN` (Phase 2 passed), and `REGRESSION_RED` (Phase 2 failed — blocking).
 * **Integration Test Runner:** Executes only `*.integration.spec.ts` files in `/tests/integration/`. Writes `integration_state` and `integration_test_pass_ratio` to `state.json`. Performs syntax-only validation during Stage 2b and full execution during Stage 4.
 * **Dependency Monitor:** Polls `feature_registry` on every `MERGED` event. Automatically unblocks features in `DEPENDENCY_BLOCKED` state when their dependencies are satisfied.
 * **Memory Rotator:** Moves files from `memory-bank/hot-context/` to `memory-bank/archive-cold/` at sprint conclusion.

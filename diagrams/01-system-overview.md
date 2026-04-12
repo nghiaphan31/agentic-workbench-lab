@@ -145,7 +145,6 @@ graph TB
 
     subgraph ARBITER_LAYER["Arbiter Layer — Python Scripts / The Law"]
         direction LR
-        SM[state_manager.py\nMaster lock - state.json owner]
         TO[test_orchestrator.py\nTwo-phase runner - Phase 1 and Phase 2]
         ITR[integration_test_runner.py\nIntegration gate - FLOW-NNN]
         DM[dependency_monitor.py\nAuto-unblocks DEPENDENCY_BLOCKED]
@@ -194,7 +193,6 @@ graph TB
 
     RC -->|activates| AA
     RC -->|activates| DA
-    RC -->|receives reports from| SM
 
     AA -->|reads state| SJ
     AA -->|writes| FEAT
@@ -211,8 +209,6 @@ graph TB
     DLA -->|reads all| FILE_LAYER
     DLA -->|writes docs| VAULT
 
-    SM -->|writes| SJ
-    SM -->|reads| SJ
     TO -->|runs unit tests against| SRC
     TO -->|updates state.json| SJ
     TO -->|Phase 2 - full regression| TESTS_UNIT
