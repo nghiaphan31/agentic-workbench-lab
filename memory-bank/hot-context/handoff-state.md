@@ -36,6 +36,6 @@
 
 ## Notes
 
-**agentic-workbench-template** is now at commit `063072f` with all 3 layers complete.
-**agentic-workbench-v2-specs** is at commit `068002c` with specs/docs + nested template copy.
-**Canonical template repo:** `C:\Users\nghia\AGENTIC_DEVELOPMENT_PROJECTS\agentic-workbench-template`
+**agentic-workbench-engine** is now at commit `063072f` with all 3 layers complete.
+**agentic-workbench-lab** is at commit `068002c` with specs/docs + nested engine copy.
+**Canonical engine repo:** `C:\Users\nghia\AGENTIC_DEVELOPMENT_PROJECTS\agentic-workbench-engine`

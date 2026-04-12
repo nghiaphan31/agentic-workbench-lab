@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
-TEMPLATE_ROOT = REPO_ROOT / "agentic-workbench-template"
+TEMPLATE_ROOT = REPO_ROOT / "agentic-workbench-engine"
 
 
 # =============================================================================

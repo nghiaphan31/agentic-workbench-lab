@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
-TEMPLATE_ROOT = REPO_ROOT / "agentic-workbench-template"
+TEMPLATE_ROOT = REPO_ROOT / "agentic-workbench-engine"
 
 
 def read_state(temp_workbench):

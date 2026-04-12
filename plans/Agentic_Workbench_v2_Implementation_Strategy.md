@@ -29,7 +29,7 @@ graph LR
 
 ## Recommended Approach: The Template Repository Strategy
 
-Maintain the workbench as a **standalone Git repository** (`agentic-workbench-template`). This is the single source of truth for all Engine files. Application repositories consume it via `workbench-cli.py`.
+Maintain the workbench as a **standalone Git repository** (`agentic-workbench-engine`). This is the single source of truth for all Engine files. Application repositories consume it via `workbench-cli.py`.
 
 This approach gives you:
 - **Version control** of the workbench itself (separate from any application)
@@ -46,7 +46,7 @@ This approach gives you:
 
 **Deliverables:**
 
-1. **Create `agentic-workbench-template` repository**
+1. **Create `agentic-workbench-engine` repository**
    - Initialize with `git init`, set default branch to `main`
    - Commit message: `chore(workbench): initialize template repository`
 

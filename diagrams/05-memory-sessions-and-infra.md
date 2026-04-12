@@ -396,7 +396,7 @@ Immutable audit trail]
 Compliance artifacts]
     end
 
-    subgraph TEMPLATE["agentic-workbench-template repo
+    subgraph TEMPLATE["agentic-workbench-engine repo
 Source of truth for Engine files"]
         T1[Latest .clinerules]
         T2[Latest .roomodes]
@@ -438,7 +438,7 @@ sequenceDiagram
     autonumber
     actor Dev as Developer
     participant CLI as workbench-cli.py
-    participant Template as agentic-workbench-template repo
+    participant Template as agentic-workbench-engine repo
     participant NewRepo as New Application Repository
     participant Arbiter as Arbiter scripts
     participant StateJSON as state.json

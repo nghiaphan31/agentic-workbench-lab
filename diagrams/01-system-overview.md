@@ -30,12 +30,14 @@ graph TB
     end
 
     subgraph ARBITER["The Arbiter — The Governor / The Law"]
-        AR1[State and Gate Manager\nOwns state.json]
+        AR1[State Manager\nReads/writes state.json deterministically]
         AR2[Test Orchestrator\nRuns test suites deterministically]
         AR3[Gherkin Validator\nSyntax and REQ-ID checks]
         AR4[Memory Rotator\nSprint-end file rotation]
         AR5[Audit Trail Logger\nImmutable session metadata]
         AR6[Crash Recovery Daemon\nHeartbeat every 5 min]
+        AR7[Integration Test Runner\nRuns integration suite gate]
+        AR8[Dependency Monitor\nAuto-unblocks DEPENDENCY_BLOCKED]
     end
 
     subgraph FILES["File System as Database"]
@@ -187,7 +189,7 @@ graph TB
 
     subgraph CLI_LAYER["CLI Layer — Global Tool"]
         WCLI[workbench-cli.py\nGlobal install\ninit / upgrade / status / rotate]
-        TMPL[agentic-workbench-template\nSource of truth for Engine files]
+        TMPL[agentic-workbench-engine\nSource of truth for Engine files]
         WCLI <-->|fetches and injects| TMPL
     end
 

@@ -35,6 +35,29 @@
 
 ---
 
+## ADR-004: Repo Naming — agentic-workbench-lab + agentic-workbench-engine
+
+- **Date:** 2026-04-12
+- **Context:** The two-repo ecosystem needed clear, non-confusing names. `agentic-workbench-v2-specs` undersold the repo's value (it contains specs + design + validation). `agentic-workbench-template` was confusing because "template" implied the repo was a project template to clone, when it's actually the canonical engine repo that gets injected into application repos.
+- **Decision:** Rename both repos:
+  - `agentic-workbench-v2-specs` → `agentic-workbench-lab` — this repo is the lab environment where specs, design, and engine validation happen. It contains `Agentic Workbench v2 - Draft.md`, implementation plans, diagrams, and the `tests/workbench/` validation suite.
+  - `agentic-workbench-template` → `agentic-workbench-engine` — this repo is the canonical source of truth for all engine files (.clinerules, .roomodes, Arbiter scripts, workbench-cli.py). It gets injected into application repos via `workbench-cli.py init/upgrade`. The embedded copy in the lab repo should be a git submodule pinned to a specific commit.
+- **Consequences:** Clear naming. The engine repo is clearly the "engine" (not a template). The lab repo is clearly where development/experimentation happens (not just specs).
+
+---
+
+## ADR-005: Lab Repo Cleanup — Canonical vs. Runtime Artifacts
+
+- **Date:** 2026-04-12
+- **Context:** The lab repo (agentic-workbench-lab) contained runtime artifacts (`state.json`, `_inbox/`, `features/`, `src/`, `tests/unit/`, `tests/integration/`) that belong in application repos, not in a specs/design/validation repo. This created confusion about the repo's purpose and risked the embedded engine copy drifting from the canonical engine repo.
+- **Decision:**
+  1. Remove all runtime artifacts from the lab repo root: `state.json`, `_inbox/`, `features/`, `src/`, `tests/unit/`, `tests/integration/`, `.workbench/`.
+  2. Convert `agentic-workbench-engine/` (the embedded engine copy) to a git submodule pointing to the canonical `agentic-workbench-engine` repo.
+  3. Keep `memory-bank/hot-context/` (active context for the lab's own agent sessions), `tests/workbench/` (validation suite), `docs/`, `diagrams/`, `plans/`.
+- **Consequences:** The lab repo now has a single, clear purpose: specs + design + validation. The embedded engine is always in sync with the canonical engine via git submodule pinning. No more silent drift risk.
+
+---
+
 ## Adding New ADRs
 
 When a significant architectural decision is made:

@@ -42,7 +42,7 @@ flowchart LR
         S3_7{Full suite\npasses?}
         S3_8[state.json = REGRESSION_RED\nRegression log is primary input]
         S3_9[state.json = GREEN\nAll tests pass\nNo regressions]
-        S3_10[Stage files for PR\nGit commit with REQ-ID\nfeat-IDEA-NNN-slug]
+        S3_10[Stage files for PR\nGit commit with REQ-ID\nfeat-REQ-NNN-slug]
         S3_11[Generate new\nError Logs]
 
         S3_1 --> S3_2
@@ -112,6 +112,10 @@ stateDiagram-v2
     INTEGRATION_CHECK --> REVIEW_PENDING : All integration tests pass\nSecurity scan triggered
 
     REVIEW_PENDING --> MERGED : HITL Gate 2\nLead Engineer approves PR\nMerge to develop
+
+    REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt\nMid-stage requirements change\nduring review
+
+    REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt\nMid-stage requirements change\nduring review
 
     MERGED --> INIT : Next feature cycle begins\nstate reset
 

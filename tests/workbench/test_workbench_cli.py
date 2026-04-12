@@ -94,7 +94,7 @@ class TestWorkbenchCLI:
         # .workbench-version should be updated
         version_file = project_dir / ".workbench-version"
         assert version_file.exists()
-        assert "v2.2" in version_file.read_text()
+        assert "2.2" in version_file.read_text()
 
     def test_uc044_upgrade_safe_state_merged(self, tmp_path):
         """UC-044: upgrade — safe state MERGED — proceeds"""

@@ -48,7 +48,7 @@ Agent modes are specialized operational states of **Roo Code** (the Agent). Each
 
 - Always use the **full canonical name** when first introducing a mode
 - Use the **canonical short form** after introduction (e.g., "the Architect" not "the Product Agent")
-- "Product Agent" is **forbidden** — it is a conversational alias only; never use in spec documents
+- "Product Agent" is a **documented conversational alias** — permitted in Glossary entries and agent prompts, but forbidden in running prose and implementation documents
 
 ---
 

@@ -402,7 +402,7 @@ Git serves as the ultimate bedrock, preserving the history of how human intent b
 * **`main`:** Production state. It is frozen, never committed to directly, and never deleted.  
 * **`develop`:** Primary integration mainline. It is long-lived, never deleted, and serves as the base for all feature branches and stabilization branches. Direct commits to `develop` are permitted only for trivial chores; all feature work must arrive via PR merge from a `feature/` or `lab/` branch. Never described as "wild" — it is the controlled integration target for all feature work.
 * **`stabilization/vX.Y`:** Scoped release stabilization. It is a permanent artifact kept for traceability and never deleted after merge.  
-* **`feature/{Timebox}/{IDEA-NNN}-{slug}`:** Scoped feature grouping. It merges via PR and is never deleted after merge.  
+* **`feature/{Timebox}/{REQ-NNN}-{slug}`:** Scoped feature grouping. It merges via PR and is never deleted after merge.
 * **`lab/{Timebox}/{slug}`:** Ad-hoc experimental exploration.  
 * **`hotfix/{Ticket}`:** Emergency production fix. Branched from the production tag on `main`, merged to both `main` and `develop`.
 
