@@ -19,15 +19,6 @@
 
 ---
 
-## Handoff: Sprint 1 → Sprint 2
-
-- **Completed:** Sprint 0 (Layer 1 Engine) + Sprint 1 (Layer 2 Arbiter)
-- **Current State:** `INIT` — workbench fully operational, ready for application repo
-- **Recommendations:** Proceed to Sprint 2 — Layer 3 (workbench-cli.py + Git hooks)
-- **Blocked By:** None
-
----
-
 ## Active Handoffs
 
 (TODO: Write handoff entries here when completing tasks or reaching timebox boundaries)
@@ -36,6 +27,4 @@
 
 ## Notes
 
-**agentic-workbench-template** is now at commit `9f96f79` with both Layer 1 and Layer 2 complete.
-**agentic-workbench-v2-specs** is at commit `6e680a0` with specs/docs.
-**Next:** Sprint 2 — workbench-cli.py bootstrapper + Git hooks (the physical barrier).
+(TODO: Any additional handoff notes)
