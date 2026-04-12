@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agentic-workbench.io/roo-settings.schema.json",
   "version": "2.0",
   "settings": {
     "roo-cline.allowedCommands": [
