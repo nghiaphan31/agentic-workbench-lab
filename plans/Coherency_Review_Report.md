@@ -402,7 +402,7 @@ The following aspects are **fully coherent** across all layers reviewed in this 
 
 ---
 
-## Edition 3 — Beginners Guide Targeted Review (2026-04-12)
+## Edition 3 — Beginners Guide Targeted Review + Schema Fix (2026-04-12)
 
 **Scope:** `docs/Beginners_Guide.md` vs. `workbench-cli.py`, `.clinerules`, `.roomodes`, `.roo-settings.json`, `state.json`, `Canonical_Naming_Conventions.md`
 
@@ -415,6 +415,7 @@ The following aspects are **fully coherent** across all layers reviewed in this 
 | E3-01 | 🟡 Moderate | `docs/Beginners_Guide.md` Step 1.4 | Success output block showed fictional emoji-decorated output (`✅ 📁 🔧`) that does not match actual CLI output (`[WORKBENCH-CLI]` prefix, 2 lines). Was marked fixed in Edition 2 but was not. | ✅ Updated to match actual CLI output |
 | E3-02 | 🟢 Minor | `docs/Beginners_Guide.md` Appendix C | `FEATURE_GREEN` state missing from state reference table. Present in `Canonical_Naming_Conventions.md` §6 but absent from guide. | ✅ Added `FEATURE_GREEN` row with correct description |
 | E3-03 | 🟢 Minor | `agentic-workbench-engine/workbench-cli.py` line 7 | Docstring still referenced `agentic-workbench-template` (old repo name). Guide correctly uses `agentic-workbench-engine` throughout. | ✅ Fixed in Code mode |
+| E3-04 | 🟡 Moderate | `agentic-workbench-engine/.roo-settings.json` + lab `.roo-settings.json` | `$schema: "https://agentic-workbench.io/roo-settings.schema.json"` — URL is unreachable, causing VS Code "Unable to load schema" error in both the engine and lab repos. | ✅ Removed `$schema` field from both files |
 
 ### What Was Verified as Correct in Edition 3
 
