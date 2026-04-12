@@ -19,11 +19,11 @@
 
 ---
 
-## Handoff: Sprint 1 → Sprint 2
+## Handoff: Sprint 3 Complete → Application Ready
 
-- **Completed:** Sprint 0 (Layer 1 Engine) + Sprint 1 (Layer 2 Arbiter)
-- **Current State:** `INIT` — workbench fully operational, ready for application repo
-- **Recommendations:** Proceed to Sprint 2 — Layer 3 (workbench-cli.py + Git hooks)
+- **Completed:** Sprint 0 (Layer 1 Engine) + Sprint 1 (Layer 2 Arbiter) + Sprint 3 (Layer 3 CLI + Hooks)
+- **Current State:** `INIT` — workbench fully operational across all 3 layers
+- **Recommendations:** Workbench is ready for use. Initialize an application repo with `workbench-cli.py init <project-name>`.
 - **Blocked By:** None
 
 ---
@@ -36,6 +36,6 @@
 
 ## Notes
 
-**agentic-workbench-template** is now at commit `9f96f79` with both Layer 1 and Layer 2 complete.
-**agentic-workbench-v2-specs** is at commit `6e680a0` with specs/docs.
-**Next:** Sprint 2 — workbench-cli.py bootstrapper + Git hooks (the physical barrier).
+**agentic-workbench-template** is now at commit `063072f` with all 3 layers complete.
+**agentic-workbench-v2-specs** is at commit `068002c` with specs/docs + nested template copy.
+**Canonical template repo:** `C:\Users\nghia\AGENTIC_DEVELOPMENT_PROJECTS\agentic-workbench-template`
