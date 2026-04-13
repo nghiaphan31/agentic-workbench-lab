@@ -9,9 +9,9 @@
 
 ## Executive Summary
 
-The Agentic Workbench v2 canonical sources are **highly coherent**. A previous coherency audit (session `coherency-fix-session-2026-04-13`) identified and fixed 27 findings across 18 files. This follow-up review confirms those fixes were correctly applied and finds **zero critical conflicts**, **zero medium contradictions**, and **3 minor recommendations** for future improvement.
+The Agentic Workbench v2 canonical sources are **highly coherent**. A previous coherency audit (session `coherency-fix-session-2026-04-13`) identified and fixed 27 findings across 18 files. This follow-up review confirms those fixes were correctly applied and finds **zero critical conflicts**, **1 medium issue** (`.roomodes` invalid enum), and **3 minor recommendations** for future improvement.
 
-**Overall Assessment:** ✅ PASS — The system presents a unified, consistent behavioral constitution.
+**Overall Assessment:** ⚠️ CONDITIONAL PASS — System is coherent but `.roomodes` has invalid enum values that should be fixed.
 
 ---
 
@@ -22,7 +22,7 @@ The Agentic Workbench v2 canonical sources are **highly coherent**. A previous c
 |------|--------|-------|
 | [`.clinerules`](.clinerules) | ✅ | Version 2.2-root, matches engine |
 | [`.roo-settings.json`](.roo-settings.json) | ✅ | Lab-specific overrides justified |
-| [`.roomodes`](.roomodes) | ✅ | All 6 modes defined |
+| [`.roomodes`](.roomodes) | ⚠️ | `"source": "built-in"` invalid enum (should be `"project"`) |
 | [`pytest.ini`](pytest.ini) | ✅ | Standard configuration |
 | [`README.md`](README.md) | ✅ | Two-repo architecture clear |
 | [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md) | ✅ | 1062 lines, comprehensive |
@@ -33,7 +33,7 @@ The Agentic Workbench v2 canonical sources are **highly coherent**. A previous c
 |------|--------|-------|
 | [`.clinerules`](agentic-workbench-engine/.clinerules) | ✅ | Version 2.2, matches root |
 | [`.roo-settings.json`](agentic-workbench-engine/.roo-settings.json) | ✅ | Minimal template |
-| [`.roomodes`](agentic-workbench-engine/.roomodes) | ✅ | Matches root |
+| [`.roomodes`](agentic-workbench-engine/.roomodes) | ⚠️ | Matches root — same `"source": "built-in"` issue |
 | [`pyproject.toml`](agentic-workbench-engine/pyproject.toml) | ✅ | Version 2.1.0 |
 | [`state.json`](agentic-workbench-engine/state.json) | ✅ | Template state |
 | [`workbench-cli.py`](agentic-workbench-engine/workbench-cli.py) | ✅ | 651 lines |
@@ -103,6 +103,27 @@ The previous audit session fixed:
 - `.husky/` references → `.workbench/hooks/` (Canonical_Naming_Conventions.md §4, diagrams/05)
 - "Documentation Agent" → "Documentation / Librarian Agent" (diagrams/01)
 - `INIT → UPGRADE_IN_PROGRESS` transition missing → added (diagrams/03)
+
+### 🔴 NEW FINDING: .roomodes Invalid `source` Enum Value
+
+**Severity:** Medium
+**Status:** Requires Fix
+
+**Issue:** Both root `.roomodes` and engine `.roomodes` use `"source": "built-in"` for 3 agent modes (Architect, Developer, Orchestrator). However, the Roo Code schema only allows `"source": "global"` or `"source": "project"` — `"built-in"` is not a valid enum value.
+
+**Evidence:**
+```
+Invalid enum value. Expected 'global' | 'project', received 'built-in'
+```
+
+**Affected Modes (both .roomodes files):**
+- Architect Agent (mode index 4)
+- Developer Agent (mode index 5)
+- Orchestrator Agent (mode index 6)
+
+**Impact:** The `.roomodes` files will fail validation against the Roo Code schema. However, this appears to be a schema interpretation issue — Roo Code may accept `"built-in"` as a custom value despite the schema saying otherwise.
+
+**Recommendation:** Change `"source": "built-in"` to `"source": "project"` for consistency, as these are custom project-defined modes (not built-in to Roo Code).
 
 ### 🔵 MINOR RECOMMENDATIONS: 3
 
@@ -255,20 +276,28 @@ Engine `.roo-settings.json` has the minimal template. This is intentional and do
 | Category | Critical | Medium | Minor | Info |
 |----------|----------|--------|-------|------|
 | Conflicts | 0 | 0 | 0 | — |
-| Contradictions | 0 | 0 | 0 | — |
+| Contradictions | 0 | 1 | 0 | `.roomodes` invalid enum |
 | Terminology Drift | 0 | 0 | 0 | — |
 | Missing References | 0 | 0 | 0 | — |
 | Version Mismatches | 0 | 0 | 1 | REC-001 |
 | Documentation Gaps | 0 | 0 | 2 | REC-002, REC-003 |
-| **Total** | **0** | **0** | **3** | — |
+| **Total** | **0** | **1** | **3** | — |
 
 ---
 
 ## Conclusion
 
-The Agentic Workbench v2 canonical sources are **coherent and consistent**. The previous audit session successfully fixed all critical and medium findings. The remaining 3 minor recommendations are **non-blocking** and represent opportunities for future polish rather than current system defects.
+The Agentic Workbench v2 canonical sources are **mostly coherent and consistent**, with one medium-priority issue requiring attention.
 
-**The system is ready for production use.**
+**Medium Priority Issue:**
+- `.roomodes` files use `"source": "built-in"` which is not a valid Roo Code schema enum value (expected: `"global"` or `"project"`). This should be changed to `"source": "project"` for consistency.
+
+**Minor Recommendations (Non-Blocking):**
+- REC-001: `pyproject.toml` version drift
+- REC-002: `develop` branch terminology
+- REC-003: Hook installation documentation
+
+**The system is functional but the `.roomodes` enum issue should be addressed for full schema compliance.**
 
 ---
 
