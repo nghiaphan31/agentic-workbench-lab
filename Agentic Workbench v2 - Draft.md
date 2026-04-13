@@ -684,3 +684,369 @@ Your workflow will be:
 1. Maintain and evolve the workbench logic in `repo: agentic-workbench-template`.  
 2. Use a global Python script (`workbench-cli`) to clone that template and inject it into new or existing application repositories.
 
+---
+
+## Part 9: Implementation Requirements
+
+This part itemizes all implementation requirements derived from the Gap Implementation Plan v2. Each requirement is tagged with a unique GAP identifier, severity level, and sprint assignment for traceability.
+
+### 9.1 Gap Summary
+
+| GAP-ID | Description | Severity | Sprint | Enforces Rule(s) |
+|--------|-------------|----------|--------|------------------|
+| GAP-1 | `compliance_snapshot.py` missing | 🟡 Moderate | Sprint B | Phase 3 Compliance |
+| GAP-2 | `biome.json` template missing | 🟡 Moderate | Sprint B | Code Quality |
+| GAP-3 | Hook installation not automated in `workbench-cli.py` | 🔴 Critical | Sprint A | CMT-1, STM-1, STM-2, REG-2 |
+| GAP-4 | `arbiter_capabilities` never set to `true` | 🟡 Moderate | Sprint B | CMD-2, CMD-TRANSITION |
+| GAP-5 | `REVIEW_PENDING → MERGED` transition not enforced | 🔴 Critical | Sprint A | Pipeline Closure |
+| GAP-6 | `STAGE_1_ACTIVE` / `REQUIREMENTS_LOCKED` transitions not enforced | 🔴 Critical | Sprint A | STM-1 |
+| GAP-7 | `file_ownership` map never populated | 🟡 Moderate | Sprint B | Dependency Management |
+| GAP-8 | Phase 0 Ideation Pipeline absent | 🟢 Minor | Sprint C | Phase 0 Discovery |
+| GAP-9 | `regression_failures` always empty (TODO in code) | 🟡 Moderate | Sprint B | REG-1 |
+| GAP-10 | PyPI packaging absent | 🟢 Minor | Sprint C | Distribution |
+| GAP-11 | Cold Zone MCP tool absent — `archive-cold/` is write-only | 🔴 Critical | Sprint A | MEM-1 |
+| GAP-12 | `.roomodes` uses YAML-like format — custom modes may be inert | 🔴 Critical | Sprint A | FAC-1 |
+| GAP-13 | `gherkin_validator.py` issues warnings not errors for unresolved `@depends-on` | 🔴 Critical | Sprint A | TRC-1 |
+| GAP-14 | `pre-commit` hook does not validate Conventional Commits format | 🟡 Moderate | Sprint B | CMT-1 |
+| GAP-15 | No observable proxy checks for partial/honor-only rules | 🔴 Critical | Sprint A | SLC-1, HND-1, MEM-2, CR-1, DEP-3, FAC-1, TRC-2, REG-1, CMD-TRANSITION |
+
+---
+
+### 9.2 Sprint A — Critical Pipeline Wiring
+
+#### GAP-3: Automate Hook Installation in `workbench-cli.py`
+
+**Requirement:** The `workbench-cli.py` MUST automatically install Arbiter hooks from `.workbench/hooks/` into `.git/hooks/` during both `init` and `upgrade` commands.
+
+**Implementation:**
+- Add `_install_hooks(repo_path)` helper function
+- Call `_install_hooks()` from `cmd_init()` and `cmd_upgrade()`
+- Add `install-hooks` subcommand for manual re-installation
+- Hooks MUST be made executable on Unix/Mac systems
+
+**Files affected:** `workbench-cli.py`
+
+---
+
+#### GAP-5: `REVIEW_PENDING → MERGED` State Transition
+
+**Requirement:** The pipeline MUST support the `REVIEW_PENDING → MERGED` transition deterministically via CLI.
+
+**Implementation:**
+- Add `merge --req-id REQ-NNN` subcommand to `workbench-cli.py`
+- Command MUST validate `state.json.state == "REVIEW_PENDING"` before transition
+- Command MUST update `feature_registry[REQ-NNN].state = "MERGED"` with `merged_at` timestamp
+- Command MUST trigger `dependency_monitor.py check-unblock` to unblock downstream features
+- Command MUST clear `active_req_id` and reset `state` to `MERGED`
+
+**Files affected:** `workbench-cli.py`
+
+---
+
+#### GAP-6: `STAGE_1_ACTIVE` and `REQUIREMENTS_LOCKED` State Transitions
+
+**Requirement:** The pipeline entry path MUST be executable via CLI without manual `state.json` editing.
+
+**Implementation:**
+- Add `start-feature --req-id REQ-NNN [--slug slug]` subcommand:
+  - Transitions `INIT`/`MERGED` → `STAGE_1_ACTIVE`
+  - Creates `feature_registry` entry for REQ-NNN
+  - Sets `active_req_id = REQ-NNN`
+  
+- Add `lock-requirements --req-id REQ-NNN` subcommand:
+  - Transitions `STAGE_1_ACTIVE` → `REQUIREMENTS_LOCKED`
+  - Validates `.feature` file exists in `/features/`
+  - Triggers `gherkin_validator.py` on the feature file
+  - Checks dependency gate; sets `DEPENDENCY_BLOCKED` if unmet deps
+  - Sets `stage = 2`
+
+- Add `set-red --req-id REQ-NNN` subcommand:
+  - Transitions `REQUIREMENTS_LOCKED` → `RED`
+  - Called by Test Engineer Agent after writing failing tests
+
+- Add `review-pending --req-id REQ-NNN` subcommand:
+  - Transitions `GREEN` → `REVIEW_PENDING`
+  - Validates `state.json.integration_state = GREEN` before allowing transition
+  - Sets `stage = 4`
+
+**Files affected:** `workbench-cli.py`
+
+---
+
+#### GAP-11: Cold Zone MCP Tool
+
+**Requirement:** Rule MEM-1 MUST be enforceable — agents MUST have a compliant path to access Cold Zone data.
+
+**Implementation:**
+- Create `.workbench/mcp/archive_query_server.py` MCP server
+- Expose `search_archive(query, sprint=None)` tool — returns max 3 results with excerpts
+- Expose `read_archive_file(filename, max_lines=100)` tool — path traversal blocked
+- Add `mcpServers.archive-query` entry to `.roo-settings.json`
+- Update Rule MEM-1 in `.clinerules` to reference the `archive-query` MCP tool by name
+
+**Files affected:**
+- `.workbench/mcp/archive_query_server.py` (new)
+- `.workbench/mcp/README.md` (new)
+- `.roo-settings.json`
+- `.clinerules`
+
+---
+
+#### GAP-12: `.roomodes` Format Compatibility
+
+**Requirement:** Custom agent modes MUST be parseable by Roo Code.
+
+**Implementation:**
+- Convert `.roomodes` from YAML-like `modes:` format to JSON `customModes` array format
+- Each mode MUST include: `slug`, `name`, `roleDefinition`, `groups`, `source`
+- Required custom modes: `test-engineer`, `reviewer-security`, `documentation-librarian`
+- Verify modes appear in Roo Code mode selector after conversion
+
+**Files affected:**
+- `.roomodes` (engine root)
+- `.roomodes` (lab root)
+
+---
+
+#### GAP-13: `gherkin_validator.py` Warning vs. Error for `@depends-on`
+
+**Requirement:** Rule TRC-1 MUST be deterministically enforced at commit time.
+
+**Implementation:**
+- Split `@depends-on` validation into two cases:
+  - Dependency **not in registry** → `warnings` (non-blocking, may be planned)
+  - Dependency **in registry but not MERGED** → `errors` (blocking)
+- The `pre-commit` hook MUST block commits to `.feature` files with unresolved non-MERGED dependencies
+
+**Files affected:** `.workbench/scripts/gherkin_validator.py`
+
+---
+
+#### GAP-15: `arbiter_check.py` — Compliance Health Scanner
+
+**Requirement:** All 9 remaining honor-only rules MUST have observable proxy checks.
+
+**Implementation:**
+- Create `.workbench/scripts/arbiter_check.py` with `CHECK_REGISTRY` of 13 observable proxy checks
+- Implement `check` mode: full scan, all 13 checks
+- Implement `check-session` mode: CRITICAL checks only (SLC-2, MEM-1, DEP-3, FAC-1, CR-1)
+- Implement `check --rule RULE_ID` mode: single rule check
+
+**Check Registry:**
+
+| Rule | Check ID | Observable Proxy | Severity |
+|------|----------|-----------------|----------|
+| SLC-1 | `check_startup_protocol` | `activeContext.md` mtime < 10 min ago | WARNING |
+| SLC-2 | `check_audit_log_immutability` | Git hash vs current content mismatch | CRITICAL |
+| HND-1 | `check_handoff_read` | `handoff-state.md` mtime vs last commit | WARNING |
+| HND-2 | `check_handoff_freshness` | Sprint marker staleness | WARNING |
+| MEM-1 | `check_cold_zone_access` | Git log on `archive-cold/` | CRITICAL |
+| MEM-2 | `check_decision_log_updated` | `decisionLog.md` mtime vs sprint start | WARNING |
+| CR-1 | `check_crash_checkpoint` | `session-checkpoint.md` ACTIVE + stale heartbeat | WARNING |
+| DEP-3 | `check_dependency_blocked_mode` | Non-Orchestrator commits during block | CRITICAL |
+| FAC-1 | `check_file_access_constraints` | Staged files vs stage-allowed scope | CRITICAL |
+| TRC-2 | `check_live_imports_from_non_merged` | Import scanner vs `feature_registry` | WARNING |
+| REG-1 | `check_regression_failures_populated` | Empty `regression_failures` when `REGRESSION_RED` | WARNING |
+| CMD-TRANSITION | `check_arbiter_capabilities_registered` | All `arbiter_capabilities = false` | WARNING |
+| FOR-1 | `check_forbidden_self_declaration` | "Completed" in handoff but `state != GREEN` | WARNING |
+
+**Integration:**
+- Add `check` subcommand to `workbench-cli.py`
+- Extend `cmd_status()` to call `arbiter_check.py check`
+- Add section 0 to `pre-commit` hook calling `arbiter_check.py check-session --block-on-critical`
+- Update `.clinerules` Startup Protocol (SLC-1) to add step 0: run `arbiter_check.py check-session`
+
+**Files affected:**
+- `.workbench/scripts/arbiter_check.py` (new)
+- `workbench-cli.py`
+- `.workbench/hooks/pre-commit`
+- `.clinerules`
+
+---
+
+### 9.3 Sprint B — Correctness Improvements
+
+#### GAP-7: Populate `file_ownership` Map in `pre-commit` Hook
+
+**Requirement:** The `file_ownership` map MUST be populated on every Stage 3 commit.
+
+**Implementation:**
+- Add section 6 to `pre-commit` hook: update `file_ownership` for all staged `/src/` files
+- Add `pre-commit` to `ALLOWED_WRITERS` list in hook section 1
+
+**Files affected:** `.workbench/hooks/pre-commit`
+
+---
+
+#### GAP-9: Populate `regression_failures` with Actual Test Output
+
+**Requirement:** The Developer Agent MUST receive actionable failure details during regressions.
+
+**Implementation:**
+- Update `run_tests()` in `test_orchestrator.py` to return `failures` list
+- Parse pytest JSON report or vitest JSON reporter for failure details
+- Replace `regression_failures = []  # TODO` with `result.get("failures", [])`
+
+**Files affected:** `.workbench/scripts/test_orchestrator.py`
+
+---
+
+#### GAP-4: Automate `arbiter_capabilities` Registration
+
+**Requirement:** The Phase B/C migration MUST be automated.
+
+**Implementation:**
+- Add `register` subcommand to each Arbiter script
+- Each script sets its own `arbiter_capabilities` key to `true`
+- Add `register-arbiter` command to `workbench-cli.py` that runs all 7 register commands
+
+**Capability key mapping:**
+
+| Script | `arbiter_capabilities` key |
+|--------|---------------------------|
+| `test_orchestrator.py` | `test_orchestrator` |
+| `gherkin_validator.py` | `gherkin_validator` |
+| `memory_rotator.py` | `memory_rotator` |
+| `audit_logger.py` | `audit_logger` |
+| `crash_recovery.py` | `crash_recovery` |
+| `dependency_monitor.py` | `dependency_monitor` |
+| `integration_test_runner.py` | `integration_test_runner` |
+
+**Files affected:** All Arbiter scripts + `workbench-cli.py`
+
+---
+
+#### GAP-1: `compliance_snapshot.py` — Compliance Vault Script
+
+**Requirement:** Phase 3 compliance snapshots MUST be automated.
+
+**Implementation:**
+- Create `compliance_snapshot.py --tag v1.0.0`
+- Creates `compliance-vault/{tag}/` directory
+- Generates Traceability Matrix from `feature_registry` + `file_ownership`
+- Copies all `.feature` files into vault
+- Copies `state.json` snapshot into vault
+- Generates timestamped `COMPLIANCE_SNAPSHOT_{tag}_{timestamp}.md` summary
+
+**Files affected:** `.workbench/scripts/compliance_snapshot.py` (new)
+
+---
+
+#### GAP-2: `biome.json` Template
+
+**Requirement:** Code quality enforcement MUST be configured.
+
+**Implementation:**
+- Create `biome.json` in engine root with standard configuration
+- Add `biome.json` to `ENGINE_FILES` in `workbench-cli.py`
+
+**Files affected:** `biome.json` (new), `workbench-cli.py`
+
+---
+
+#### GAP-14: Conventional Commits Validation in `pre-commit` Hook
+
+**Requirement:** Rule CMT-1 MUST be deterministically enforced at commit time.
+
+**Implementation:**
+- Add section 7 to `pre-commit` hook: validate commit message format
+- Pattern: `^(feat|fix|docs|chore|refactor|test|perf|ci)(\(.+\))?: .{1,}`
+- Block commit if format is invalid
+
+**Files affected:** `.workbench/hooks/pre-commit`
+
+---
+
+### 9.4 Sprint C — Enhancement Features
+
+#### GAP-8: Phase 0 — Ideation & Discovery Pipeline
+
+**Requirement:** The Architect Agent MUST support the Phase 0 Socratic discovery loop.
+
+**Implementation:**
+- Create `narrativeRequest.md` template in `memory-bank/hot-context/`
+- Add Phase 0 instructions to Architect Agent `roleDefinition` in `.roomodes`
+- Add `narrativeRequest.md` to `memory_rotator.py` rotation policy (Rotate)
+- Add `narrativeRequest.md` to `workbench-cli.py` `cmd_init()` hot-context copy
+
+**Files affected:**
+- `memory-bank/hot-context/narrativeRequest.md` (new)
+- `.roomodes`
+- `memory_rotator.py`
+- `workbench-cli.py`
+
+---
+
+#### GAP-10: PyPI Packaging
+
+**Requirement:** `pip install agentic-workbench-cli` MUST be possible.
+
+**Implementation:**
+- Create `pyproject.toml` in engine root
+- Configure `workbench-cli` as entry point
+
+**Files affected:** `pyproject.toml` (new)
+
+---
+
+### 9.5 Post-Implementation Enforcement Forecast
+
+| Rule | Before GAP-15 | After Sprint A | After Sprint B | After Sprint C |
+|------|--------------|----------------|----------------|----------------|
+| SLC-1 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| SLC-2 | 🟡 Partial | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| HND-1 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| HND-2 | 🟡 Partial | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| TRC-1 | 🔴 Honor | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| TRC-2 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| CMT-1 | 🔴 Honor | 🟡 Partial | 🟢 Enforced | 🟢 Enforced |
+| STM-1 | 🔴 Honor | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| STM-2 | 🟡 Partial | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| INT-1 | 🔴 Honor | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| REG-1 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| REG-2 | 🟡 Partial | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| CMD-1 | 🟡 Partial | 🟡 Partial | 🟡 Partial | 🟡 Partial |
+| CMD-2 | 🟡 Partial | 🟡 Partial | 🟢 Enforced | 🟢 Enforced |
+| CMD-3 | 🟡 Partial | 🟡 Partial | 🟡 Partial | 🟡 Partial |
+| CMD-TRANSITION | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| MEM-1 | 🔴 Honor | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| MEM-2 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| DEP-1 | 🔴 Honor | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| DEP-2 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| DEP-3 | 🔴 Honor | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| FAC-1 | 🔴 Honor | 🟢 Enforced | 🟢 Enforced | 🟢 Enforced |
+| CR-1 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+| FOR-1 | 🔴 Honor | 🟡 Warned | 🟡 Warned | 🟡 Warned |
+
+**Final Score After Full Implementation:**
+
+| Rating | Current | After All Sprints | Delta |
+|--------|---------|-------------------|-------|
+| 🟢 ENFORCED | 0 (0%) | 14 (58%) | +14 |
+| 🟡 WARNED / PARTIAL | 7 (29%) | 10 (42%) | +3 |
+| 🔴 HONOR-ONLY | 17 (71%) | 0 (0%) | -17 |
+
+> **Projected enforcement level:** 100% warned or enforced (up from 29%). Zero silent violations.
+
+---
+
+### 9.6 Files Changed Summary
+
+| File | Sprint | Change Type |
+|------|--------|-------------|
+| `workbench-cli.py` | A | Modify — add state transition commands, hook installation |
+| `.workbench/mcp/archive_query_server.py` | A | **Create new** — MCP server |
+| `.workbench/mcp/README.md` | A | **Create new** — MCP documentation |
+| `.roo-settings.json` | A | Modify — add MCP server entry |
+| `.clinerules` | A | Modify — update MEM-1, SLC-1 |
+| `.roomodes` | A | **Convert** — YAML-like to JSON |
+| `.workbench/scripts/gherkin_validator.py` | A | Modify — warning vs error for `@depends-on` |
+| `.workbench/scripts/arbiter_check.py` | A | **Create new** — Compliance health scanner |
+| `.workbench/hooks/pre-commit` | A/B | Modify — add arbiter_check call, file ownership, commit validation |
+| `.workbench/scripts/test_orchestrator.py` | B | Modify — parse failures, add register |
+| `.workbench/scripts/*.py` | B | Modify — add register command |
+| `.workbench/scripts/compliance_snapshot.py` | B | **Create new** — Compliance vault |
+| `biome.json` | B | **Create new** — Biome config |
+| `memory-bank/hot-context/narrativeRequest.md` | C | **Create new** — Phase 0 template |
+| `pyproject.toml` | C | **Create new** — PyPI packaging |
+
