@@ -80,10 +80,12 @@ These are deterministic programs owned by **The Arbiter**. Each script has exact
 
 | Canonical Hook Name | What It Is NOT Called | Trigger | Purpose |
 |---|---|---|---|
-| **`pre-commit`** | "Commit hook", "precommit" | Before `git commit` | Runs `gherkin_validator.py` + `biome.json` linting; blocks if `state.json` modified by non-Arbiter |
+| **`pre-commit`** | "Commit hook", "precommit" | Before `git commit` | Runs `arbiter_check.py check-session` (GAP-15) + `gherkin_validator.py` + `biome.json` linting; blocks if `state.json` modified by non-Arbiter |
 | **`pre-push`** | "Push hook", "prepush" | Before `git push` | Blocks push if state is `RED/REGRESSION_RED/INTEGRATION_RED/PIVOT_IN_PROGRESS`; blocks direct push to `main` |
 | **`post-merge`** | "Merge hook", "postmerge" | After PR merge | Runs `dependency_monitor.py check-unblock`; auto-unblocks blocked features |
 | **`post-tag`** | "Tag hook", "posttag" | After `git tag` | Triggers compliance snapshot (PDFs + Traceability Matrix) |
+
+**Hook Implementation:** Hooks are installed in `.workbench/hooks/` (not `.husky/`). Installation via `workbench-cli.py install-hooks`.
 
 ### Canonical Usage Rules
 
@@ -209,9 +211,10 @@ The following terms are **forbidden** in all specification and implementation do
 
 | Document | Version | Tracks |
 |---|---|---|
-| `Agentic Workbench v2 - Draft.md` | v2.0 (updated 2026-04-12) | Architectural specification |
+| `Agentic Workbench v2 - Draft.md` | v2.0 (updated 2026-04-13) | Architectural specification |
 | `Agentic_Workbench_v2_Implementation_Strategy.md` | v2.1 | Implementation sequence (Sprint 0–3) |
 | `Spec_Gap_Fix_Plan_Integration_NonRegression_CrossFeature.md` | v2.1 | Gap fixes incorporated into spec |
-| `Canonical_Naming_Conventions.md` | v2.1 | This document — single source of truth (self-referential) |
+| `Canonical_Naming_Conventions.md` | v2.2 | This document — single source of truth (self-referential) |
+| `plans/Coherency_Review_Report.md` | v1.0 (2026-04-13) | Coherency audit report |
 
 Whenever a new feature or gap fix is incorporated into the spec, this naming conventions document should be updated to reflect any new named entities introduced.

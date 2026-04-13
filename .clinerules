@@ -5,6 +5,8 @@
 **Owner:** The Workbench (Engine Layer)
 **Version:** 2.2-root
 
+> **Note on version suffix:** The `-root` suffix identifies this as the root-level (workspace-level) `.clinerules` file. The engine submodule at `agentic-workbench-engine/` carries the same file as `2.2` (no suffix). The root-level file is the canonical behavioral constitution for the consuming workspace; the engine file is the upstream template. Both files are identical in content.
+
 > **Authority:** This file is the behavioral constitution for all Roo Code agent modes. Every rule here is mandatory and must be enforced by the agent regardless of mode. Violations are not advisory — they are breaches of the workbench contract.
 
 ---

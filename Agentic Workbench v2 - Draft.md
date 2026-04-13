@@ -255,6 +255,7 @@ The following table defines the per-file policy applied by the Memory Rotator at
 | `RELEASE.md` | **Persist** (never rotated) | Single source of truth for all releases; must accumulate. |
 | `handoff-state.md` | **Reset** (overwritten to empty template, not archived) | Handoff data is ephemeral; archiving stale handoffs creates noise. |
 | `session-checkpoint.md` | **Reset** (overwritten to empty template, not archived) | Crash recovery data is only valid for the current session. |
+| `narrativeRequest.md` | **Persist** (never rotated) | Phase 0 output; the authoritative source narrative for the current sprint's feature work. |
 
 ### Session Lifecycle Protocols
 
@@ -570,6 +571,7 @@ stateDiagram-v2
     PIVOT_IN_PROGRESS --> PIVOT_APPROVED : HITL 1.5 - Human approves Git diff
     PIVOT_APPROVED --> RED : Arbiter invalidates tests and re-runs suite
 
+    INIT --> UPGRADE_IN_PROGRESS : workbench-cli.py upgrade
     REQUIREMENTS_LOCKED --> UPGRADE_IN_PROGRESS : workbench-cli.py upgrade
     MERGED --> UPGRADE_IN_PROGRESS : workbench-cli.py upgrade
     UPGRADE_IN_PROGRESS --> INIT : Arbiter completes engine overwrite and commits
@@ -601,7 +603,7 @@ Standalone Python scripts run locally or via hooks to enforce the rules outside 
 
 Roo Code requires custom system prompts and constraints to align its modes with the pipeline stages:
 
-* **Architect Agent (Stage 1 \- Built-in):** Read/Write access to `.feature` files. Read-Only access to `/src`. Translates human narrative into strict Gherkin. Also referred to as "Product Agent" in conversational contexts — these are synonymous (see Glossary).
+* **Architect Agent (Stage 1 \- Built-in):** Read/Write access to `.feature` files. Read-Only access to `/src`. Translates human narrative into strict Gherkin.
 * **Test Engineer Agent (Stage 2 — Custom):** Read/Write access to `/tests/unit/` to generate failing unit/acceptance test suites based on the Gherkin scenarios. Read-Only access to `/src` to understand existing code structure. In Stage 2b, Read/Write access to `/tests/integration/` for writing integration test skeletons; Read-Only access to `/features/` and `/src`.
 * **Developer Agent (Stage 3 \- Built-in):** Read/Write access to `/src` to write feature source code. Read-Only access to `/tests` and `.feature` files. Ingests Error Logs and writes feature source code exclusively to satisfy the failing tests. The Developer Agent MUST NOT self-declare completion until both unit tests (`state = GREEN`) and integration tests (`integration_state = GREEN`) pass.
 * **Orchestrator Agent (Stage 4 \- Built-in):** Read-Only access across the board to manage the Review stage and broader lifecycle handoffs.
@@ -612,7 +614,7 @@ Roo Code requires custom system prompts and constraints to align its modes with 
 
 The root-level context enforcing behavioral mandates for the LLM across all modes:
 
-* **Session Lifecycle Protocols:** Mandates the strict "CHECK→CREATE→READ→ACT" sequence for the Startup Protocol, addressing `activeContext.md` and `progress.md`. Defines the Close Protocol.
+* **Session Lifecycle Protocols:** Mandates the strict "SCAN→CHECK→CREATE→READ→ACT" sequence for the Startup Protocol, addressing `activeContext.md` and `progress.md`. Defines the Close Protocol.
 * **Inter-Agent Handoff Protocol:** Requires the agent to log completion data and next steps into `handoff-state.md`.
 * **Traceability Mandates:** Directs the assignment of Traceability IDs to all requirements, enforcing their inclusion in filenames, internal file tags, and `@depends-on` Gherkin declarations.
 * **Commit Constraints:** Strictly enforces Conventional Commits (`feat(scope)`, `fix(scope)`).
@@ -622,7 +624,7 @@ The root-level context enforcing behavioral mandates for the LLM across all mode
 * **Dependency Check (DEP-1):** Before beginning Stage 3 implementation, the Developer Agent MUST read `state.json.feature_registry` and confirm all entries in `depends_on` have `state = MERGED`. If any dependency is not `MERGED`, the agent MUST halt and report the blocking dependency to `handoff-state.md`.
 * **Dependency Isolation (DEP-2):** The Developer Agent MUST NOT import or call live APIs from features whose `state.json.feature_registry` entry is not `MERGED`. Stub interfaces are permitted; live imports are not.
 * **Dependency Block Response (DEP-3):** When `state.json.state = DEPENDENCY_BLOCKED`, only the Orchestrator Agent may act — its sole function is dependency monitoring. No other agent is activated while blocked.
-* **Command Delegation Phase A (CMD-1):** During the pre-Arbiter transition (Layer 1), the Agent MAY auto-execute commands matching the patterns defined in `.roo-settings.json` `auto_approve.patterns`. All other commands require human approval via Roo Chat.
+* **Command Delegation Phase A (CMD-1):** During the pre-Arbiter transition (Layer 1), the Agent MAY auto-execute commands matching the patterns defined in `.roo-settings.json` `settings.roo-cline.allowedCommands`. All other commands require human approval via Roo Chat.
 * **Command Delegation Phase B/C (CMD-2):** Once an Arbiter script owns a command domain (i.e., the corresponding entry in `state.json.arbiter_capabilities` is `true`), the Agent MUST NOT execute the equivalent command directly. All command execution for that domain MUST be delegated to the Arbiter script. The Agent reads `state.json.arbiter_capabilities` on every session start to determine its operational constraints.
 * **Command Capability Transition (CMD-TRANSITION):** The Agent MUST read `state.json.arbiter_capabilities` on every session start. For each domain where the value is `true`, the Agent treats the corresponding command patterns as permanently forbidden and delegates all execution to the Arbiter script. The Agent never writes to `arbiter_capabilities` — the Arbiter is the sole writer.
 * **Command Forbidden Patterns (CMD-3):** The following command patterns are permanently forbidden regardless of phase. They require human approval without exception: `^(rm|mv|cp).* -rf .*$`, `^git push.*$`, `^git commit.*$`, `^(sudo|chmod|chown).*$`, `^(kill|killall|pkill).*$`, `^docker .*$`, `^kubectl .*$`, `^terraform .*$`.
@@ -651,7 +653,7 @@ The singular interface for the human operator is **Roo Chat** inside the VS Code
 
 To allow seamless upgrades, the workspace must have a rigid boundary between what belongs to the Workbench (and can be overwritten during an upgrade) and what belongs to the Application (which must never be touched by a workbench upgrade).
 
-* **The Engine (Owned by the Workbench):** `.clinerules`, `.roomodes`, the Python Arbiter scripts (e.g., `.workbench/scripts/`), Git Hooks (`.husky/`), and `biome.json`.  
+* **The Engine (Owned by the Workbench):** `.clinerules`, `.roomodes`, the Python Arbiter scripts (e.g., `.workbench/scripts/`), Git Hooks (`.workbench/hooks/`), and `biome.json`.
 * **The Payload (Owned by the Application):** `/src`, `/tests`, `memory-bank/` (except core templates), and the application's actual configuration (e.g., `package.json`, `docker-compose.yml`).
 
 ### 5.2 Initialization: The Deterministic Bootstrapper

@@ -23,10 +23,21 @@ class TestPreCommitHook:
     def test_uc052_precommit_statejson_staged_by_non_arbiter_blocked(self, temp_workbench, state_factory):
         """UC-052: state.json staged by non-Arbiter — blocked"""
         state_factory(state="INIT")
-        # Simulate state.json staged, author not workbench-cli or arbiter
-        # The check: CURRENT_AUTHOR != "workbench-cli" and != "arbiter"
+        # The actual ALLOWED_WRITERS list from pre-commit hook:
+        # ALLOWED_WRITERS="test_orchestrator.py integration_test_runner.py dependency_monitor.py memory_rotator.py audit_logger.py crash_recovery.py workbench-cli pre-commit"
+        allowed_writers = [
+            "test_orchestrator.py",
+            "integration_test_runner.py",
+            "dependency_monitor.py",
+            "memory_rotator.py",
+            "audit_logger.py",
+            "crash_recovery.py",
+            "workbench-cli",
+            "pre-commit"
+        ]
+        # If last_updated_by is not in ALLOWED_WRITERS, commit is blocked
         current_author = "agent"  # simulating non-Arbiter author
-        is_arbiter = current_author in ("workbench-cli", "arbiter")
+        is_arbiter = current_author in allowed_writers
         assert not is_arbiter  # Should be blocked
 
     def test_uc053_precommit_valid_feature_file_staged(self, temp_workbench, state_factory, feature_factory, run_script):

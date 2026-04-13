@@ -391,12 +391,34 @@ Make sure `.clinerules` is in the **root** of your project (not in a subdirector
 
 ## Appendix B: Key Commands Reference
 
+The `workbench-cli.py` is the deterministic bootstrapper and state manager for the workbench.
+
+### Initialization & Upgrades
+
 | Command | Purpose |
 |---------|---------|
-| `python workbench-cli.py init <project-name>` | Create a new project |
-| `python workbench-cli.py upgrade --version <vX.Y>` | Upgrade an existing project |
-| `python workbench-cli.py status` | Show current state |
-| `python workbench-cli.py rotate` | Run memory rotation (sprint end) |
+| `python workbench-cli.py init <project-name>` | Create a new project with workbench scaffold |
+| `python workbench-cli.py upgrade --version <vX.Y>` | Upgrade existing project to new workbench version |
+| `python workbench-cli.py install-hooks` | (Re)install Arbiter hooks into `.git/hooks/` |
+| `python workbench-cli.py register-arbiter` | Register all Arbiter script capabilities in `state.json` |
+| `python workbench-cli.py check` | Run Arbiter compliance health scan |
+
+### Feature Lifecycle
+
+| Command | Purpose |
+|---------|---------|
+| `python workbench-cli.py start-feature --req-id REQ-NNN` | Transition INIT/MERGED → STAGE_1_ACTIVE |
+| `python workbench-cli.py lock-requirements --req-id REQ-NNN` | Transition STAGE_1_ACTIVE → REQUIREMENTS_LOCKED |
+| `python workbench-cli.py set-red --req-id REQ-NNN` | Transition REQUIREMENTS_LOCKED → RED |
+| `python workbench-cli.py review-pending --req-id REQ-NNN` | Transition GREEN → REVIEW_PENDING |
+| `python workbench-cli.py merge --req-id REQ-NNN` | Mark feature as MERGED, close pipeline cycle |
+
+### Operations
+
+| Command | Purpose |
+|---------|---------|
+| `python workbench-cli.py status` | Display `state.json` in human-readable format |
+| `python workbench-cli.py rotate` | Trigger memory rotator for sprint end |
 
 ---
 

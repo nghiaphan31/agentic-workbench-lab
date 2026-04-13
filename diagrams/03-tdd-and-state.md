@@ -124,6 +124,7 @@ stateDiagram-v2
 
     PIVOT_APPROVED --> RED : Arbiter invalidates affected tests\nMerges pivot branch\nRe-runs test suite
 
+    INIT --> UPGRADE_IN_PROGRESS : workbench-cli.py upgrade\nFresh workbench (no active feature)
     REQUIREMENTS_LOCKED --> UPGRADE_IN_PROGRESS : workbench-cli.py upgrade\nSafe dormant state
     MERGED --> UPGRADE_IN_PROGRESS : workbench-cli.py upgrade\nSafe dormant state
 

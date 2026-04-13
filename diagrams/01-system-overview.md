@@ -25,7 +25,7 @@ graph TB
         A3[Developer Agent\nStage 3 - Source code]
         A4[Orchestrator Agent\nStage 4 - Oversight RO]
         A5[Reviewer / Security\nStage 4 - Static scan]
-        A6[Documentation Agent\nBackground - Docs]
+        A6[Documentation / Librarian Agent\nBackground - Docs]
         A1 --> A2 --> A3 --> A4 --> A5 --> A6
     end
 

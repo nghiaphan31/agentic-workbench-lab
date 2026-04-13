@@ -372,9 +372,9 @@ test_orchestrator.py, integration_test_runner.py
 dependency_monitor.py, gherkin_validator.py
 memory_rotator.py, audit_logger.py
 crash_recovery.py]
-        E4[.husky/ or .workbench/hooks/
+        E4[.workbench/hooks/
 Git hooks
-pre-commit, pre-push, post-tag]
+pre-commit, pre-push, post-merge, post-tag]
         E5[biome.json
 Root-level linting and formatting
 Configured for JS/TS projects — see pyproject.toml for Python]
@@ -463,7 +463,7 @@ sequenceDiagram
     CLI->>Template: Fetch latest Engine files
     Template->>CLI: Return .clinerules .roomodes\nArbiter scripts Git hooks biome.json
 
-    CLI->>NewRepo: Step 3 - Engine Injection\nCopy .clinerules .roomodes\nCopy Arbiter scripts to .workbench/scripts/\nCopy Git hooks to .husky/
+    CLI->>NewRepo: Step 3 - Engine Injection\nCopy .clinerules .roomodes\nCopy Arbiter scripts to .workbench/scripts/\nCopy Git hooks to .workbench/hooks/
 
     CLI->>StateJSON: Step 4 - State Initialization\nGenerate fresh state.json\nstate = INIT, version = 2.0
 

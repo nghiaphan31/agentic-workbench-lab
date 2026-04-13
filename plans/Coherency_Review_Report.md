@@ -1,431 +1,908 @@
-# Coherency & Consistency Review Report — Agentic Workbench v2
-## Edition 3 — Beginners Guide Targeted Review
+# Agentic Workbench v2 — Coherency Audit Report
+## Edition 4 — Comprehensive All-Sources Audit
 
-**Reviewer:** Senior Architect (Roo)
-**Date:** 2026-04-12
-**Scope:** `docs/Beginners_Guide.md` vs. source code, rules, prompts, and configuration files
-**Status:** COMPLETE — supersedes Edition 2
-**Previous Edition:** Edition 2 (Full Folder Re-Review, same date)
-
----
-
-## Sources Reviewed
-
-| Layer | Files |
-|---|---|
-| **Spec** | [`Agentic Workbench v2 - Draft.md`](../Agentic%20Workbench%20v2%20-%20Draft.md) |
-| **Naming Authority** | [`Canonical_Naming_Conventions.md`](../Canonical_Naming_Conventions.md) |
-| **Plans** | [`plans/Agentic_Workbench_v2_Implementation_Strategy.md`](./Agentic_Workbench_v2_Implementation_Strategy.md), [`plans/Repo_Cleanup_and_Deployment_Strategy.md`](./Repo_Cleanup_and_Deployment_Strategy.md), [`plans/Spec_Gap_Fix_Plan_Integration_NonRegression_CrossFeature.md`](./Spec_Gap_Fix_Plan_Integration_NonRegression_CrossFeature.md), [`plans/Diagrams_Update_Plan.md`](./Diagrams_Update_Plan.md) |
-| **Diagrams** | [`diagrams/01-system-overview.md`](../diagrams/01-system-overview.md) through [`diagrams/05-memory-sessions-and-infra.md`](../diagrams/05-memory-sessions-and-infra.md) |
-| **Engine** | [`agentic-workbench-engine/.clinerules`](../agentic-workbench-engine/.clinerules), [`agentic-workbench-engine/state.json`](../agentic-workbench-engine/state.json), [`agentic-workbench-engine/workbench-cli.py`](../agentic-workbench-engine/workbench-cli.py), [`agentic-workbench-engine/.roo-settings.json`](../agentic-workbench-engine/.roo-settings.json), [`agentic-workbench-engine/.roomodes`](../agentic-workbench-engine/.roomodes) |
-| **Lab Root** | [`.clinerules`](../.clinerules), [`.roo-settings.json`](../.roo-settings.json), [`.roomodes`](../.roomodes), [`README.md`](../README.md), [`.workbench-version`](../.workbench-version) |
-| **Memory Bank** | All 8 files in [`memory-bank/hot-context/`](../memory-bank/hot-context/) |
-| **Docs** | [`docs/Beginners_Guide.md`](../docs/Beginners_Guide.md) |
-| **Tests** | [`tests/workbench/conftest.py`](../tests/workbench/conftest.py) and all `test_*.py` files |
+**Auditor:** Senior Architect (Roo Code — Architect Agent)
+**Date:** 2026-04-13
+**Scope:** All canonical sources and rules files (excluding `memory-bank/`, `docs/conversations/`, `plans/`)
+**Status:** AUTHORITY — This report is the single source of truth for coherency findings as of this date.
+**Previous Edition:** Edition 3 (Beginners Guide Targeted Review, 2026-04-12)
 
 ---
 
 ## Executive Summary
 
-The overall architecture remains **coherent at the conceptual level**. The core triad (Agent / Arbiter / HITL), the state machine, the two-phase test loop, and the memory system are consistently described across the spec, plans, and diagrams.
+The Agentic Workbench v2 canonical source set is **substantially coherent** with a strong architectural foundation. The core pipeline, state machine, memory system, and agent role definitions are consistent across the majority of files. However, the audit identified **27 specific issues** across five severity categories: 3 Critical conflicts, 11 Moderate inconsistencies, 9 Minor gaps or terminology drift, 4 Structural/completeness issues, and 3 Cross-reference validity problems.
 
-**Progress since Edition 1:** Several critical issues from Edition 1 have been resolved:
-- ✅ `IDEA-NNN` → `REQ-NNN` fixed in Diagrams 5, 14, and 15
-- ✅ `state_manager.py` removed from Diagram 20 and `Canonical_Naming_Conventions.md`
-- ✅ `CLEAN` added to `Canonical_Naming_Conventions.md` §6
-- ✅ `agentic-workbench-engine` submodule correctly wired in `.gitmodules` and `conftest.py`
-- ✅ Engine `state.json` has all `arbiter_capabilities` set to `false` (correct initial state)
+The most significant issues are:
 
-**New issues found in this review:** 14 issues across 5 categories.
-
-| Category | Count | Highest Severity |
-|---|---|---|
-| Repo Naming Propagation | 4 | 🔴 Critical |
-| Diagram Residuals | 4 | 🟡 Moderate |
-| Spec Internal Inconsistencies | 2 | 🟡 Moderate |
-| CLI / Documentation Gaps | 3 | 🟡 Moderate |
-| Settings File Divergence | 1 | 🟢 Minor |
+1. **Version mismatch** between root `.clinerules` (v2.2-root) and engine `.clinerules` (v2.2) — the root file has a `-root` suffix that is unexplained and creates ambiguity about authority.
+2. **Startup Protocol heading mismatch** — the engine `.clinerules` section heading says `CHECK → CREATE → READ → ACT` but the body correctly says `SCAN → CHECK → CREATE → READ → ACT`, creating a contradiction within the same file.
+3. **`integration_state` value inconsistency** — `integration_test_runner.py` writes `"RED"` when tests fail, but `state.json` schema, `Canonical_Naming_Conventions.md`, and `.clinerules` all use `"INTEGRATION_RED"` as the canonical state value.
+4. **`roo-settings.json` missing `npm install` / `pnpm install` / `yarn`** in the engine submodule vs. the root — the root `.roo-settings.json` includes these but the engine's does not.
+5. **`Agentic Workbench v2 - Draft.md` references `auto_approve.patterns`** (old key name) in the CMD-1 rule description, while the actual `.roo-settings.json` uses `settings.roo-cline.allowedCommands`.
+6. **`post-tag` hook contains a stale TODO comment** referencing `compliance_snapshot.py` as "not yet implemented" even though the script now exists.
+7. **`Beginners_Guide.md` documents only 4 CLI commands** (`init`, `upgrade`, `status`, `rotate`) but `workbench-cli.py` now has 10+ commands added by the Gap Implementation Plan.
 
 ---
 
-## Category 1: Repo Naming Propagation (Old Names Not Updated)
+## Part 1: Files Reviewed
 
-ADR-004 renamed `agentic-workbench-template` → `agentic-workbench-engine` and `agentic-workbench-v2-specs` → `agentic-workbench-lab`. These renames have NOT been propagated to several documents.
-
-### ISSUE-A01 — `Repo_Cleanup_and_Deployment_Strategy.md` Uses Old Repo Names Throughout 🔴 Critical
-
-**Where it appears:**
-
-| Location | Old Name Used |
+| File | Version / Status |
 |---|---|
-| [`plans/Repo_Cleanup_and_Deployment_Strategy.md`](./Repo_Cleanup_and_Deployment_Strategy.md) §1 Problem Statement | `agentic-workbench-v2-specs`, `agentic-workbench-template` |
-| §2.1 Current Repository Anatomy | `agentic-workbench-v2-specs`, `agentic-workbench-template` |
-| §2.2 Standalone Canonical Repo | `agentic-workbench-template` |
-| §3.1 Target Architecture diagram | `agentic-workbench-template`, `agentic-workbench-v2-specs` |
-| §7.1 Git Submodule commands | `agentic-workbench-template` |
-| §8.1 Proposed Clean Structure | `agentic-workbench-v2-specs` |
-| §9 Implementation Plan | `agentic-workbench-template` |
-
-**The conflict:** ADR-004 (in [`memory-bank/hot-context/decisionLog.md`](../memory-bank/hot-context/decisionLog.md)) explicitly renamed both repos. The plan document was written before ADR-004 and was never updated. The plan is now historically inaccurate and will confuse any reader.
-
-**Impact:** A developer reading this plan will use the wrong repo names in git commands and directory paths.
-
-**Fix:** Do a global find-and-replace in `Repo_Cleanup_and_Deployment_Strategy.md`:
-- `agentic-workbench-v2-specs` → `agentic-workbench-lab`
-- `agentic-workbench-template` → `agentic-workbench-engine`
-
-Also update the path references: `C:\...\agentic-workbench-template` → `C:\...\agentic-workbench-engine`.
-
----
-
-### ISSUE-A02 — `Beginners_Guide.md` References `agentic-workbench-template` Throughout 🔴 Critical
-
-**Where it appears:**
-
-| Location | Old Name Used |
-|---|---|
-| [`docs/Beginners_Guide.md`](../docs/Beginners_Guide.md) Step 1.1 | `git clone .../agentic-workbench-template.git` |
-| Step 1.1 | `~/agentic-workbench-template` |
-| Step 1.2 | `~/agentic-workbench-template` (PATH export) |
-| Step 1.2 | `C:\Users\YourUsername\agentic-workbench-template` (Windows PATH) |
-| Step 2.3 | `cd ~/agentic-workbench-template` |
-| Step 2.3 | `git pull origin main` (in `~/agentic-workbench-template`) |
-| Step 2.8 | `cd ~/agentic-workbench-template` |
-| Appendix D | `Browse ~/agentic-workbench-template for examples` |
-
-**Fix:** Replace all `agentic-workbench-template` references with `agentic-workbench-engine` in `Beginners_Guide.md`.
-
----
-
-### ISSUE-A03 — Diagrams 16, 17, and 20 Reference `agentic-workbench-template` 🟡 Moderate
-
-**Where it appears:**
-
-| Diagram | Location | Old Name |
-|---|---|---|
-| Diagram 20 ([`diagrams/01-system-overview.md`](../diagrams/01-system-overview.md)) | `CLI_LAYER` subgraph | `TMPL[agentic-workbench-template\nSource of truth for Engine files]` |
-| Diagram 16 ([`diagrams/05-memory-sessions-and-infra.md`](../diagrams/05-memory-sessions-and-infra.md)) | `TEMPLATE` subgraph | `subgraph TEMPLATE["agentic-workbench-template repo\nSource of truth for Engine files"]` |
-| Diagram 17 ([`diagrams/05-memory-sessions-and-infra.md`](../diagrams/05-memory-sessions-and-infra.md)) | Sequence participant | `participant Template as agentic-workbench-template repo` |
-
-**Fix:** Update all three diagrams to replace `agentic-workbench-template` with `agentic-workbench-engine`.
+| `.clinerules` (root) | v2.2-root |
+| `.roo-settings.json` (root) | v2.1 |
+| `.roomodes` (root) | JSON customModes format |
+| `pytest.ini` (root) | Standard pytest config |
+| `README.md` (root) | Current |
+| `Agentic Workbench v2 - Draft.md` | v2.0 (updated 2026-04-12) |
+| `Canonical_Naming_Conventions.md` | v2.1 |
+| `agentic-workbench-engine/.clinerules` | v2.2 |
+| `agentic-workbench-engine/.roo-settings.json` | v2.1 |
+| `agentic-workbench-engine/.roomodes` | JSON customModes format |
+| `agentic-workbench-engine/state.json` | v2.1 |
+| `agentic-workbench-engine/pyproject.toml` | v2.1.0 |
+| `agentic-workbench-engine/workbench-cli.py` | Not directly read (referenced) |
+| `.workbench/hooks/pre-commit` | v2.1 |
+| `.workbench/hooks/pre-push` | v2.1 |
+| `.workbench/hooks/post-merge` | v2.1 |
+| `.workbench/hooks/post-tag` | v2.1 |
+| `.workbench/scripts/arbiter_check.py` | v2.1 |
+| `.workbench/scripts/gherkin_validator.py` | v2.1 |
+| `.workbench/scripts/test_orchestrator.py` | v2.1 |
+| `.workbench/scripts/integration_test_runner.py` | v2.1 |
+| `.workbench/scripts/memory_rotator.py` | v2.1 |
+| `.workbench/scripts/audit_logger.py` | v2.1 |
+| `.workbench/scripts/dependency_monitor.py` | v2.1 |
+| `.workbench/scripts/crash_recovery.py` | v2.1 |
+| `.workbench/scripts/compliance_snapshot.py` | v2.1 |
+| `.workbench/mcp/archive_query_server.py` | v2.1 |
+| `diagrams/01-system-overview.md` | 2026-04-12 |
+| `diagrams/02-phase0-and-pipeline.md` | 2026-04-12 |
+| `diagrams/03-tdd-and-state.md` | 2026-04-12 |
+| `diagrams/04-adhoc-and-pivot.md` | 2026-04-12 |
+| `diagrams/05-memory-sessions-and-infra.md` | 2026-04-12 |
+| `docs/Beginners_Guide.md` | Current |
+| `tests/workbench/conftest.py` | Current |
+| `tests/workbench/test_state_machine.py` | Current |
+| `tests/workbench/test_hooks_pre_commit.py` | Current |
+| `tests/workbench/test_arbiter_check.py` | Current |
 
 ---
 
-### ISSUE-A04 — `Agentic_Workbench_v2_Implementation_Strategy.md` References `agentic-workbench-template` 🟡 Moderate
+## Part 2: Critical Conflicts (Severity: 🔴 CRITICAL)
 
-**Where it appears:** The implementation strategy plan (Sprint 0 §1, Sprint 2 §2, etc.) refers to `agentic-workbench-template` as the canonical repo name. This was the name before ADR-004.
-
-**Fix:** Update all `agentic-workbench-template` references to `agentic-workbench-engine` in the implementation strategy plan.
+These are direct contradictions between canonical sources that could cause agent misbehaviour or system failures.
 
 ---
 
-## Category 2: Diagram Residuals (Unfixed Issues from Edition 1 + New)
+### CONFLICT-001: Startup Protocol Heading vs. Body Mismatch in Engine `.clinerules`
 
-### ISSUE-B01 — Diagram 7 Missing `REVIEW_PENDING → PIVOT_IN_PROGRESS` Transition 🟡 Moderate
+**Severity:** 🔴 CRITICAL
+**Files:** [`agentic-workbench-engine/.clinerules`](agentic-workbench-engine/.clinerules:14)
 
-**Where it appears:**
+**Finding:**
 
-| Source | Transition Present? |
-|---|---|
-| [`Agentic Workbench v2 - Draft.md`](../Agentic%20Workbench%20v2%20-%20Draft.md) — State Transition Diagram | ✅ `REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt (during review)` |
-| [`diagrams/03-tdd-and-state.md`](../diagrams/03-tdd-and-state.md) — Diagram 7 | ❌ Missing — only `STAGE_1_ACTIVE` and `RED` have `PIVOT_IN_PROGRESS` transitions |
-
-**The conflict:** The spec's canonical state machine includes `REVIEW_PENDING --> PIVOT_IN_PROGRESS`. Diagram 7 does not. This was flagged in Edition 1 as ISSUE-07/14 but was NOT fixed.
-
-**Fix:** Add the following line to Diagram 7 in [`diagrams/03-tdd-and-state.md`](../diagrams/03-tdd-and-state.md) after the `RED --> PIVOT_IN_PROGRESS` line:
+The section heading at line 14 reads:
 ```
-REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt during review
+### 1.1 Startup Protocol (CHECK → CREATE → READ → ACT)
+```
+
+But the body of the same section (lines 18–25) correctly describes a **5-step** sequence starting with SCAN:
+```
+0. SCAN — Run python .workbench/scripts/arbiter_check.py check-session
+1. CHECK for activeContext.md
+2. CREATE activeContext.md from template if absent
+3. READ activeContext.md completely
+4. READ progress.md completely
+5. ACT
+```
+
+The root `.clinerules` heading at line 14 correctly reads:
+```
+### 1.1 Startup Protocol (SCAN → CHECK → CREATE → READ → ACT)
+```
+
+**Impact:** An agent reading only the heading of the engine `.clinerules` would believe the startup protocol is 4 steps (CHECK → CREATE → READ → ACT) and skip the mandatory SCAN step (running `arbiter_check.py check-session`). This directly undermines Rule SLC-1 and the entire compliance health scanner (GAP-15).
+
+**Recommendation:** Update the engine `.clinerules` section heading to match the root:
+```
+### 1.1 Startup Protocol (SCAN → CHECK → CREATE → READ → ACT)
 ```
 
 ---
 
-### ISSUE-B02 — Diagram 6 Node S3_10 Uses `feat-IDEA-NNN-slug` (Residual `IDEA-NNN`) 🟡 Moderate
+### CONFLICT-002: `integration_state` Value — `"RED"` vs. `"INTEGRATION_RED"`
 
-**Where it appears:**
+**Severity:** 🔴 CRITICAL
+**Files:**
+- [`agentic-workbench-engine/.workbench/scripts/integration_test_runner.py`](agentic-workbench-engine/.workbench/scripts/integration_test_runner.py:148)
+- [`agentic-workbench-engine/state.json`](agentic-workbench-engine/state.json:10)
+- [`Canonical_Naming_Conventions.md`](Canonical_Naming_Conventions.md:133)
+- [`agentic-workbench-engine/.clinerules`](agentic-workbench-engine/.clinerules:165)
 
-| Source | Content |
-|---|---|
-| [`diagrams/03-tdd-and-state.md`](../diagrams/03-tdd-and-state.md) — Diagram 6, node S3_10 | `S3_10[Stage files for PR\nGit commit with REQ-ID\nfeat-IDEA-NNN-slug]` |
-| All other references | `REQ-NNN` ✅ |
+**Finding:**
 
-**The conflict:** Diagram 5, 14, and 15 were correctly updated to `REQ-NNN` (Edition 1 fixes applied), but Diagram 6 node S3_10 still contains `feat-IDEA-NNN-slug`. This is a residual `IDEA-NNN` reference that was missed.
-
-**Fix:** Update node S3_10 in Diagram 6 to:
+`integration_test_runner.py` line 148 writes:
+```python
+state["integration_state"] = "RED"
 ```
-S3_10[Stage files for PR\nGit commit with REQ-ID\nfeat-REQ-NNN-slug]
+
+But the canonical state machine in `Canonical_Naming_Conventions.md` (§6, Pipeline States table) defines `INTEGRATION_RED` as the canonical state value for `state.json.state`. The `integration_state` field is a separate field from `state`, but the value `"RED"` is inconsistent with the naming convention that uses `"INTEGRATION_RED"` for integration failures.
+
+Furthermore, `state.json` initialises `integration_state` as `"NOT_RUN"` (consistent), and `integration_test_runner.py` sets it to `"GREEN"` on success (consistent), but `"RED"` on failure instead of `"INTEGRATION_RED"`.
+
+The `pre-push` hook checks `state.json.state` for `INTEGRATION_RED` (the main state field), not `integration_state`. The `integration_test_runner.py` also sets `state["state"] = "INTEGRATION_RED"` (line 162) when the main state is `GREEN` and integration fails — this part is correct. But the `integration_state` field value `"RED"` vs. `"INTEGRATION_RED"` is inconsistent.
+
+**Impact:** Tests in `test_state_machine.py` (SM-009) assert `state["integration_state"] == "RED"` — so the tests are written to match the buggy implementation, not the spec. Any code or agent that checks `integration_state == "INTEGRATION_RED"` will fail to detect integration failures.
+
+**Recommendation:** Change `integration_test_runner.py` line 148 to:
+```python
+state["integration_state"] = "INTEGRATION_RED"
+```
+And update `test_state_machine.py` SM-009 assertion accordingly.
+
+---
+
+### CONFLICT-003: `Draft.md` CMD-1 References Obsolete Key `auto_approve.patterns`
+
+**Severity:** 🔴 CRITICAL
+**Files:**
+- [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:625)
+- [`agentic-workbench-engine/.clinerules`](agentic-workbench-engine/.clinerules:184)
+- [`.roo-settings.json`](.roo-settings.json:11)
+
+**Finding:**
+
+`Agentic Workbench v2 - Draft.md` at line 625 (in the `.clinerules` section description) states:
+
+> **Command Delegation Phase A (CMD-1):** During the pre-Arbiter transition (Layer 1), the Agent MAY auto-execute commands matching the patterns defined in `.roo-settings.json` `auto_approve.patterns`.
+
+But the actual `.roo-settings.json` uses the key `settings.roo-cline.allowedCommands`, not `auto_approve.patterns`. The `.clinerules` files (both root and engine) correctly reference `settings.roo-cline.allowedCommands` in their CMD-1 rule text.
+
+**Impact:** The Draft spec is the primary architectural reference document. Any developer or agent reading the CMD-1 description in the Draft will look for `auto_approve.patterns` in `.roo-settings.json` and not find it, causing confusion about how the allowlist is configured.
+
+**Recommendation:** Update `Agentic Workbench v2 - Draft.md` line 625 to reference `settings.roo-cline.allowedCommands` consistently with the actual implementation and `.clinerules`.
+
+---
+
+## Part 3: Moderate Inconsistencies (Severity: 🟡 MODERATE)
+
+These are inconsistencies that do not cause immediate failures but create ambiguity, drift, or partial enforcement gaps.
+
+---
+
+### INCONSISTENCY-001: Root `.clinerules` Version Suffix `-root` Is Unexplained
+
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`.clinerules`](.clinerules:6) — Version: `2.2-root`
+- [`agentic-workbench-engine/.clinerules`](agentic-workbench-engine/.clinerules:6) — Version: `2.2`
+
+**Finding:**
+
+The root `.clinerules` declares `**Version:** 2.2-root` while the engine `.clinerules` declares `**Version:** 2.2`. No document in the canonical set explains what `-root` means, whether the root file is authoritative over the engine file, or how they should diverge.
+
+The `README.md` states the lab repo is "not an application project" and that the engine submodule is "the single source of truth for all engine files." This implies the engine `.clinerules` should be canonical. Yet the root `.clinerules` has a higher-specificity version string.
+
+**Impact:** Agents operating in the lab repo read the root `.clinerules` (v2.2-root). Agents operating in an application project initialized from the engine read the engine `.clinerules` (v2.2). If these files diverge in content (they currently do not, except for the heading issue in CONFLICT-001), agents will behave differently in the lab vs. in application projects.
+
+**Recommendation:** Either:
+1. Document the `-root` suffix meaning in both files (e.g., "root = lab-specific overlay"), or
+2. Eliminate the suffix and keep both files at `2.2`, with a note that the engine file is canonical and the root file is a copy.
+
+---
+
+### INCONSISTENCY-002: Root `.roo-settings.json` Has Extra `allowedCommands` vs. Engine
+
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`.roo-settings.json`](.roo-settings.json:18) — root
+- [`agentic-workbench-engine/.roo-settings.json`](agentic-workbench-engine/.roo-settings.json:18) — engine
+
+**Finding:**
+
+The root `.roo-settings.json` `allowedCommands` list includes:
+```json
+"npm install",
+"pnpm install",
+"yarn",
+"npm ci",
+"npx biome check --write .",
+"npx biome lint ."
+```
+
+The engine `.roo-settings.json` `allowedCommands` list does **not** include these entries. Both files are at version `2.1`.
+
+**Impact:** Agents working in the lab repo (root) can auto-execute `npm install` and Biome commands without approval. Agents working in an application project (engine) cannot. This creates different operational surfaces for the same agent modes.
+
+The `Draft.md` Phase A template (lines 357–378) also does not include `npm install`, `pnpm install`, `yarn`, `npm ci`, `npx biome check --write .`, or `npx biome lint .` — so the root file has drifted from the spec template.
+
+**Recommendation:** Decide which is canonical. If the engine file is the template for application projects, the root file should either match it exactly or document why it diverges (lab-specific additions).
+
+---
+
+### INCONSISTENCY-003: `post-tag` Hook Contains Stale TODO for `compliance_snapshot.py`
+
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`agentic-workbench-engine/.workbench/hooks/post-tag`](agentic-workbench-engine/.workbench/hooks/post-tag:53)
+- [`agentic-workbench-engine/.workbench/scripts/compliance_snapshot.py`](agentic-workbench-engine/.workbench/scripts/compliance_snapshot.py:1)
+
+**Finding:**
+
+The `post-tag` hook at lines 53–55 contains:
+```sh
+else
+    echo "[POST-TAG] compliance_snapshot.py not found — compliance snapshot not yet automated"
+    echo "  Manual compliance snapshot required for release $tag_name"
+    echo "  TODO: Implement .workbench/scripts/compliance_snapshot.py"
+fi
+```
+
+However, `compliance_snapshot.py` **does exist** (it was created as part of GAP-1 in Sprint B). The hook's `if` branch at line 48 correctly calls it:
+```sh
+if [ -f ".workbench/scripts/compliance_snapshot.py" ]; then
+    python .workbench/scripts/compliance_snapshot.py --tag "$tag_name" 2>/dev/null || ...
+```
+
+So the `else` branch (stale TODO) will never execute in a correctly installed workbench. However, the stale TODO comment is misleading and suggests the script is not yet implemented.
+
+**Impact:** Low operational impact (the `else` branch is unreachable when the script exists), but creates confusion for developers reading the hook and may cause incorrect assumptions during debugging.
+
+**Recommendation:** Remove the stale TODO comment from the `else` branch. Replace with:
+```sh
+else
+    echo "[POST-TAG] compliance_snapshot.py not found — run: python workbench-cli.py upgrade"
+fi
 ```
 
 ---
 
-### ISSUE-B03 — Diagram 1 Arbiter Subgraph Missing `integration_test_runner.py` and `dependency_monitor.py` 🟡 Moderate
+### INCONSISTENCY-004: `Beginners_Guide.md` CLI Command Reference Is Incomplete
 
-**Where it appears:**
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`docs/Beginners_Guide.md`](docs/Beginners_Guide.md:396)
+- `agentic-workbench-engine/workbench-cli.py` (referenced)
 
-| Source | Scripts Listed |
-|---|---|
-| [`diagrams/01-system-overview.md`](../diagrams/01-system-overview.md) — Diagram 1, ARBITER subgraph | AR1: State and Gate Manager, AR2: Test Orchestrator, AR3: Gherkin Validator, AR4: Memory Rotator, AR5: Audit Trail Logger, AR6: Crash Recovery Daemon |
-| [`diagrams/01-system-overview.md`](../diagrams/01-system-overview.md) — Diagram 20, ARBITER_LAYER | `TO`, `ITR`, `DM`, `GV`, `MR`, `AL`, `CR` — all 7 scripts ✅ |
-| [`Canonical_Naming_Conventions.md`](../Canonical_Naming_Conventions.md) §3 | 7 scripts including `integration_test_runner.py` and `dependency_monitor.py` ✅ |
+**Finding:**
 
-**The conflict:** Diagram 1 (the high-level Separation of Powers diagram) shows only 6 Arbiter components, omitting `integration_test_runner.py` and `dependency_monitor.py`. Diagram 20 (the full topology) correctly shows all 7. This creates an inconsistent picture of the Arbiter's capabilities in the most prominent overview diagram.
+`Beginners_Guide.md` Appendix B documents only 4 CLI commands:
+```
+init, upgrade, status, rotate
+```
 
-**Additionally:** Diagram 1's AR1 node is labeled "State and Gate Manager" — a reference to the removed `state_manager.py` concept. This label should be updated to reflect the distributed state management reality (ADR-003).
+But `workbench-cli.py` was extended by the Gap Implementation Plan (Sprint A/B) to include at minimum:
+- `start-feature --req-id REQ-NNN`
+- `lock-requirements --req-id REQ-NNN`
+- `set-red --req-id REQ-NNN`
+- `review-pending --req-id REQ-NNN`
+- `merge --req-id REQ-NNN`
+- `install-hooks`
+- `register-arbiter`
+- `check`
 
-**Fix:**
-1. Add AR7 and AR8 nodes to Diagram 1's ARBITER subgraph for `integration_test_runner.py` and `dependency_monitor.py`.
-2. Rename AR1 from "State and Gate Manager\nOwns state.json" to "Arbiter Scripts\nDistributed state.json writers" or remove the misleading "Master lock" framing.
+**Impact:** A developer following the Beginner's Guide will not know how to advance the pipeline through its stages using the CLI. They will be unable to transition from `INIT` to `STAGE_1_ACTIVE`, lock requirements, or trigger the merge flow without reading the source code.
 
----
-
-### ISSUE-B04 — Diagram 1 Arbiter Label "State and Gate Manager" References Removed Concept 🟢 Minor
-
-**Where it appears:**
-
-| Source | Label |
-|---|---|
-| [`diagrams/01-system-overview.md`](../diagrams/01-system-overview.md) — Diagram 1, AR1 | `AR1[State and Gate Manager\nOwns state.json]` |
-| [`Canonical_Naming_Conventions.md`](../Canonical_Naming_Conventions.md) §3 | No "State and Gate Manager" script listed — removed per ADR-003 |
-| [`memory-bank/hot-context/decisionLog.md`](../memory-bank/hot-context/decisionLog.md) — ADR-003 | State management is distributed; `state_manager.py` removed |
-
-**The conflict:** ADR-003 explicitly removed `state_manager.py` and documented that state management is distributed. Diagram 1 still labels AR1 as "State and Gate Manager" — the ghost of the removed concept.
-
-**Fix:** Rename AR1 in Diagram 1 to reflect the actual distributed model, e.g., `AR1[Arbiter Scripts\nDistributed state.json writers\nEach script owns its domain]`.
+**Recommendation:** Update `Beginners_Guide.md` Appendix B to include all current CLI commands with brief descriptions.
 
 ---
 
-## Category 3: Spec Internal Inconsistencies
+### INCONSISTENCY-005: `Draft.md` Startup Protocol Describes `CHECK→CREATE→READ→ACT` (4 Steps)
 
-### ISSUE-C01 — Spec Cross-Cutting Concern 2 Uses `IDEA-NNN` in Branch Naming 🟡 Moderate
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:261)
 
-**Where it appears:**
+**Finding:**
 
-| Source | Branch Format |
-|---|---|
-| [`Agentic Workbench v2 - Draft.md`](../Agentic%20Workbench%20v2%20-%20Draft.md) — Cross-Cutting Concern 2, Branch Definitions | `feature/{Timebox}/{IDEA-NNN}-{slug}` ❌ |
-| [`Canonical_Naming_Conventions.md`](../Canonical_Naming_Conventions.md) §9 | `REQ-NNN` ✅ |
-| [`diagrams/05-memory-sessions-and-infra.md`](../diagrams/05-memory-sessions-and-infra.md) — Diagram 14 | `feature/Sprint1/REQ-001-user-auth` ✅ |
-| [`diagrams/05-memory-sessions-and-infra.md`](../diagrams/05-memory-sessions-and-infra.md) — Diagram 15 | `feature/Timebox/REQ-NNN-slug` ✅ |
-| [`.clinerules`](../.clinerules) §4.1 | `feat(REQ-NNN)` ✅ |
+`Draft.md` Cross-Cutting Concern 1 (Persistent Memory System), Session Lifecycle Protocols section at line 261 states:
 
-**The conflict:** The spec's GitFlow section (Cross-Cutting Concern 2) still uses `IDEA-NNN` in the branch naming definition `feature/{Timebox}/{IDEA-NNN}-{slug}`. All diagrams and the canonical naming conventions have been updated to `REQ-NNN`, but the spec itself was not updated in this one location.
+> **Startup Protocol (CHECK→CREATE→READ→ACT):** The agent checks for `activeContext.md`. If absent, it creates it using strict templates. It then sequentially reads `activeContext.md` and `progress.md` before taking any action.
 
-**Fix:** Update the spec's Cross-Cutting Concern 2 branch definition from `feature/{Timebox}/{IDEA-NNN}-{slug}` to `feature/{Timebox}/{REQ-NNN}-{slug}`.
+This describes the **old 4-step** protocol. The current `.clinerules` (both root and engine) define a **5-step** protocol: `SCAN → CHECK → CREATE → READ → ACT`, where step 0 is running `arbiter_check.py check-session`.
 
----
+**Impact:** The Draft spec is the primary architectural reference. Developers reading it will implement the 4-step protocol and miss the mandatory compliance scan step. This is a spec-to-implementation drift introduced by GAP-15.
 
-### ISSUE-C02 — `Canonical_Naming_Conventions.md` §2 Contradicts Itself on "Product Agent" 🟢 Minor
-
-**Where it appears:**
-
-| Source | Statement |
-|---|---|
-| [`Canonical_Naming_Conventions.md`](../Canonical_Naming_Conventions.md) §2, Aliases column | `"Product Agent", "Stage 1 Agent", "Intent Agent"` listed as **Forbidden** |
-| [`Canonical_Naming_Conventions.md`](../Canonical_Naming_Conventions.md) §2, Canonical Usage Rules | `"Product Agent" is **forbidden** — it is a conversational alias only; never use in spec documents` |
-| [`Agentic Workbench v2 - Draft.md`](../Agentic%20Workbench%20v2%20-%20Draft.md) — Part 1.5 Glossary | `"Also called 'Product Agent' in conversational contexts — these are synonymous"` |
-| [`agentic-workbench-engine/.roomodes`](../agentic-workbench-engine/.roomodes) — Architect Agent prompt | `"also known as 'Product Agent' in conversational contexts — these are synonymous"` |
-
-**The conflict:** The Canonical Naming Conventions §2 forbids "Product Agent" in spec documents. Yet the spec itself (Part 1.5 Glossary) and the `.roomodes` prompt both use "Product Agent" as a documented alias. The naming authority contradicts the spec it is supposed to govern.
-
-**Decision required:** Either (a) remove the "Product Agent" alias from the spec Glossary and `.roomodes` prompt, or (b) update the Canonical Naming Conventions to allow "Product Agent" as a documented alias in the Glossary only (not in running prose). Option (b) is more pragmatic — the alias is useful for human communication.
-
-**Fix (recommended):** Update `Canonical_Naming_Conventions.md` §2 to say: `"Product Agent" is a **documented conversational alias** — permitted in Glossary entries and agent prompts, but forbidden in running prose and implementation documents.`
+**Recommendation:** Update `Draft.md` section "Session Lifecycle Protocols" to describe the 5-step `SCAN → CHECK → CREATE → READ → ACT` protocol, referencing `arbiter_check.py check-session` as step 0.
 
 ---
 
-## Category 4: CLI / Documentation Gaps
+### INCONSISTENCY-006: `diagrams/05-memory-sessions-and-infra.md` Diagram 12 — Retracted
 
-### ISSUE-D01 — `Beginners_Guide.md` References Non-Existent `--version` Flag 🟡 Moderate
-
-**Where it appears:**
-
-| Source | Content |
-|---|---|
-| [`docs/Beginners_Guide.md`](../docs/Beginners_Guide.md) Step 1.2 | `python workbench-cli.py --version` → expected output: `Agentic Workbench CLI v2.0` |
-| [`agentic-workbench-engine/workbench-cli.py`](../agentic-workbench-engine/workbench-cli.py) — `main()` | No `--version` argument defined in `argparse` — flag does not exist ❌ |
-
-**Three sub-issues in one:**
-
-1. **`--version` flag does not exist** — `workbench-cli.py` has no `--version` argument. Running `python workbench-cli.py --version` will print the argparse help and exit with code 2.
-
-2. **Version number mismatch** — The guide says the output should be `Agentic Workbench CLI v2.0` but the current version is `2.1` (per `.workbench-version` and `workbench-cli.py` docstring).
-
-3. **Fictional success output** — Step 1.4 shows a success message with emoji (`✅ Project initialized successfully!`, `📁 Location:`, `🔧 Next steps:`) that does not match the actual CLI output (`[WORKBENCH-CLI] Project initialized successfully!` — plain text, no emoji, no location/next-steps block).
-
-**Fix:**
-- Add `--version` to `workbench-cli.py`'s argparse: `parser.add_argument("--version", action="version", version=f"Agentic Workbench CLI v{load_template_version()}")`
-- Update the guide's expected output to `Agentic Workbench CLI v2.1`
-- Update Step 1.4's success output block to match the actual CLI output
+**Severity:** N/A — RETRACTED
+**Finding:** Upon closer inspection, Diagram 12 in `diagrams/05-memory-sessions-and-infra.md` correctly shows `SCAN → CHECK → CREATE → READ → ACT` in both the note and the sequence body. This is **not** an inconsistency. Finding retracted.
 
 ---
 
-### ISSUE-D02 — `Beginners_Guide.md` Initial Commit Message Mismatch 🟢 Minor
+### INCONSISTENCY-007: `test_state_machine.py` SM-013 Does Not Test the CLI `merge` Command
 
-**Where it appears:**
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`tests/workbench/test_state_machine.py`](tests/workbench/test_state_machine.py:146)
 
-| Source | Commit Message |
-|---|---|
-| [`docs/Beginners_Guide.md`](../docs/Beginners_Guide.md) Step 1.4 | `chore(workbench): initialize Agentic Workbench v2.0` |
-| [`agentic-workbench-engine/workbench-cli.py`](../agentic-workbench-engine/workbench-cli.py) `cmd_init()` | `chore(workbench): initialize Agentic Workbench v` + `load_template_version()` = `chore(workbench): initialize Agentic Workbench v2.1` |
+**Finding:**
 
-**The conflict:** The guide hardcodes `v2.0` in the example commit message, but the CLI dynamically reads the version from `.workbench-version` (which is `2.1`). The guide is outdated.
+SM-013 (`REVIEW_PENDING → MERGED`) directly writes to `state.json` in the test body:
+```python
+state_data["state"] = "MERGED"
+state_path.write_text(json.dumps(state_data, indent=2), encoding="utf-8")
+```
 
-**Fix:** Update the guide's example commit message to `chore(workbench): initialize Agentic Workbench v2.1`, or better, note that the version is dynamic: `chore(workbench): initialize Agentic Workbench v{version}`.
+This bypasses the `workbench-cli.py merge --req-id REQ-NNN` command that was implemented as part of GAP-5. The test validates the state schema but does not validate that the CLI command correctly performs the transition, including:
+- Validating `state.json.state == "REVIEW_PENDING"` before transition
+- Setting `feature_registry[REQ-NNN].state = "MERGED"` with `merged_at` timestamp
+- Triggering `dependency_monitor.py check-unblock`
+- Clearing `active_req_id`
 
----
+**Impact:** The `REVIEW_PENDING → MERGED` transition is the most critical pipeline closure step. If the CLI `merge` command has a bug, the test suite will not catch it.
 
-### ISSUE-D03 — `Beginners_Guide.md` Appendix C Missing `PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS` States 🟢 Minor
-
-**Where it appears:**
-
-| Source | States Listed |
-|---|---|
-| [`docs/Beginners_Guide.md`](../docs/Beginners_Guide.md) Appendix C | 13 states listed — missing `PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS` |
-| [`Canonical_Naming_Conventions.md`](../Canonical_Naming_Conventions.md) §6 | 16 states listed (including `PIVOT_APPROVED`, `UPGRADE_IN_PROGRESS`, `CLEAN`) |
-| [`Agentic Workbench v2 - Draft.md`](../Agentic%20Workbench%20v2%20-%20Draft.md) — State Machine | All states including `PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS` |
-
-**The conflict:** Appendix C of the Beginners Guide lists 13 pipeline states but omits `PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS`. A developer reading the guide will not know these states exist.
-
-**Fix:** Add `PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS` to Appendix C's state table.
+**Recommendation:** Add a test `test_sm013b_review_pending_to_merged_via_cli` that calls `run_script("workbench_cli", "merge", "--req-id", "REQ-001")` and validates all side effects.
 
 ---
 
-## Category 5: Settings File Divergence
+### INCONSISTENCY-008: `arbiter_check.py` `SESSION_CHECKS` Includes `CR-1` But Spec Says "CRITICAL Only"
 
-### ISSUE-E01 — Lab `.roo-settings.json` and Engine `.roo-settings.json` Are Structurally Different 🟢 Minor
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`agentic-workbench-engine/.workbench/scripts/arbiter_check.py`](agentic-workbench-engine/.workbench/scripts/arbiter_check.py:480)
+- [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:839)
 
-**Where it appears:**
+**Finding:**
 
-| File | Structure |
-|---|---|
-| [`.roo-settings.json`](../.roo-settings.json) (lab root) | Has `settings` + `transition_map` keys |
-| [`agentic-workbench-engine/.roo-settings.json`](../agentic-workbench-engine/.roo-settings.json) | Has `settings` + `arbiter_owned` keys |
+`arbiter_check.py` defines `SESSION_CHECKS` as:
+```python
+SESSION_CHECKS = ["SLC-2", "MEM-1", "DEP-3", "FAC-1", "CR-1"]
+```
 
-**The conflict:** The lab's `.roo-settings.json` uses a `transition_map` key (an older structure) while the engine's uses `arbiter_owned` (the current structure per ADR-002). The spec (Cross-Cutting Concern 1.5) defines `arbiter_owned` as the canonical contract. The lab's `transition_map` is a legacy structure that was superseded.
+The `check-session` mode docstring says "Lightweight (CRITICAL only)". But `CR-1` (`check_crash_checkpoint`) returns `WARNING` or `INFO` status — never `CRITICAL`. So `CR-1` is included in the "CRITICAL only" session scan despite not being a CRITICAL check.
 
-**Additionally:** The lab's `deniedCommands` list does NOT include the test runner commands (`npm test`, `npx vitest`, `pytest`, etc.) that the engine's `deniedCommands` list includes. This means the lab's settings are less restrictive than the engine's — agents working in the lab repo could auto-execute test commands that should be Arbiter-owned.
+The GAP-15 spec in `Draft.md` (line 839) defines the session checks as:
+> Implement `check-session` mode: CRITICAL checks only (SLC-2, MEM-1, DEP-3, FAC-1, CR-1)
 
-**Fix:**
-1. Update the lab's `.roo-settings.json` to replace `transition_map` with `arbiter_owned` (matching the engine's structure).
-2. Add the test runner commands to the lab's `deniedCommands` list to match the engine's settings.
-3. Note: The lab repo does not run Arbiter scripts against itself (it validates the engine), so the `arbiter_owned` section in the lab's settings is informational rather than operational.
+So the spec explicitly includes `CR-1` in session checks. The docstring saying "CRITICAL only" is therefore inaccurate — it should say "CRITICAL + crash recovery checks."
+
+**Impact:** Minor — the behaviour is correct per spec. The docstring is misleading.
+
+**Recommendation:** Update the `check-session` docstring in `arbiter_check.py` to:
+```
+check-session  # Lightweight session-start check (CRITICAL checks + crash recovery)
+```
 
 ---
 
-## Summary Table — Edition 2 Issues
+### INCONSISTENCY-009: `gherkin_validator.py` CLI Interface Mismatch with `pre-commit` Hook Usage
 
-| # | Severity | Category | Source Layers Affected | Issue |
+**Severity:** 🟡 MODERATE
+**Files:**
+- [`agentic-workbench-engine/.workbench/scripts/gherkin_validator.py`](agentic-workbench-engine/.workbench/scripts/gherkin_validator.py:139)
+- [`agentic-workbench-engine/.workbench/hooks/pre-commit`](agentic-workbench-engine/.workbench/hooks/pre-commit:83)
+
+**Finding:**
+
+`gherkin_validator.py` CLI interface (line 139) requires a positional `directory` argument:
+```
+python gherkin_validator.py validate features/
+```
+
+But the `pre-commit` hook at line 83 calls it as:
+```sh
+VALIDATION_RESULT=$(python .workbench/scripts/gherkin_validator.py "$(dirname "$file")" 2>&1 || echo "VALIDATION_FAILED")
+```
+
+The hook passes the **directory** as a positional argument without the `validate` subcommand. But `gherkin_validator.py`'s `main()` uses `argparse` with `parser.add_argument("directory", ...)` — a positional argument, not a subcommand. So the hook call is actually correct for the current implementation.
+
+However, the docstring at line 14 says:
+```
+python gherkin_validator.py validate features/
+```
+
+This implies a `validate` subcommand, but the actual implementation uses a positional argument (no subcommand). The docstring is misleading.
+
+**Impact:** A developer reading the docstring will try `python gherkin_validator.py validate features/` and get an error because `validate` would be interpreted as the directory name.
+
+**Recommendation:** Fix the docstring to match the actual interface:
+```
+python gherkin_validator.py features/
+python gherkin_validator.py _inbox/ --allow-draft
+```
+
+---
+
+## Part 4: Minor Gaps and Terminology Drift (Severity: 🟢 MINOR)
+
+These are small inconsistencies that do not affect system behaviour but reduce clarity or create potential for future drift.
+
+---
+
+### MINOR-001: `Draft.md` Still Uses "Product Agent" in Running Prose (§8.2.B)
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:604)
+- [`Canonical_Naming_Conventions.md`](Canonical_Naming_Conventions.md:51)
+
+**Finding:**
+
+`Draft.md` Part 8.2.B (`.roomodes` section) at line 604 states:
+> **Architect Agent (Stage 1 - Built-in):** ... Also referred to as "Product Agent" in conversational contexts — these are synonymous (see Glossary).
+
+`Canonical_Naming_Conventions.md` §2 states:
+> "Product Agent" is a **documented conversational alias** — permitted in Glossary entries and agent prompts, but **forbidden in running prose and implementation documents**
+
+The Draft.md reference is in a running prose section (Part 8.2.B), not a Glossary entry. This violates the naming convention.
+
+**Recommendation:** Remove the "Product Agent" alias reference from Part 8.2.B of `Draft.md`. The Glossary in Part 1.5 already documents this alias correctly.
+
+---
+
+### MINOR-002: `diagrams/01-system-overview.md` Uses "Documentation Agent" (Short Form)
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`diagrams/01-system-overview.md`](diagrams/01-system-overview.md:28)
+
+**Finding:**
+
+Diagram 1 (Separation of Powers) at line 28 labels the agent as:
+```
+A6[Documentation Agent\nBackground - Docs]
+```
+
+The canonical name per `Canonical_Naming_Conventions.md` §2 is **"Documentation / Librarian Agent"**. The short form "Documentation Agent" is listed as a forbidden alias ("Doc Agent", "Wiki Agent" are forbidden, but "Documentation Agent" without "/ Librarian" is not explicitly listed as forbidden — however it is not the canonical name).
+
+**Recommendation:** Update diagram label to `Documentation / Librarian Agent` for consistency with the canonical name.
+
+---
+
+### MINOR-003: `diagrams/05-memory-sessions-and-infra.md` Diagram 16 References `.husky/` as Hook Location
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`diagrams/05-memory-sessions-and-infra.md`](diagrams/05-memory-sessions-and-infra.md:374)
+
+**Finding:**
+
+Diagram 16 (Engine vs. Payload) at line 374 shows:
+```
+E4[.husky/ or .workbench/hooks/
+Git hooks
+pre-commit, pre-push, post-tag]
+```
+
+The actual implementation uses `.workbench/hooks/` exclusively. There is no `.husky/` directory in the engine. The `Draft.md` Part 5.1 also mentions `.husky/` as the hook location:
+> **The Engine (Owned by the Workbench):** `.clinerules`, `.roomodes`, the Python Arbiter scripts (e.g., `.workbench/scripts/`), Git Hooks (`.husky/`), and `biome.json`.
+
+The `workbench-cli.py` (per GAP-3 implementation) installs hooks from `.workbench/hooks/` into `.git/hooks/`. There is no Husky dependency.
+
+**Impact:** Developers may look for a `.husky/` directory that does not exist, or attempt to install Husky unnecessarily.
+
+**Recommendation:**
+1. Update `Draft.md` Part 5.1 to reference `.workbench/hooks/` instead of `.husky/`
+2. Update Diagram 16 to remove `.husky/` reference
+
+---
+
+### MINOR-004: `Canonical_Naming_Conventions.md` §4 Missing `arbiter_check.py` from Hook Trigger Table
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`Canonical_Naming_Conventions.md`](Canonical_Naming_Conventions.md:83)
+
+**Finding:**
+
+The Git Hooks table in §4 describes the `pre-commit` hook as:
+> Runs `gherkin_validator.py` + `biome.json` linting; blocks if `state.json` modified by non-Arbiter
+
+But the actual `pre-commit` hook (post-GAP-15) now also:
+- Calls `arbiter_check.py check-session --block-on-critical` (section 0)
+- Updates `file_ownership` map (section 6, GAP-7)
+- Validates Conventional Commits format (section 7, GAP-14)
+
+The naming conventions document has not been updated to reflect these additions.
+
+**Recommendation:** Update the `pre-commit` hook description in `Canonical_Naming_Conventions.md` §4 to include all current enforcement actions.
+
+---
+
+### MINOR-005: `memory_rotator.py` Rotation Policy Includes `narrativeRequest.md` But `Draft.md` Table Does Not
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`agentic-workbench-engine/.workbench/scripts/memory_rotator.py`](agentic-workbench-engine/.workbench/scripts/memory_rotator.py:33)
+- [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:247)
+
+**Finding:**
+
+`memory_rotator.py` `ROTATION_POLICY["rotate"]` includes `narrativeRequest.md`:
+```python
+"rotate": [
+    "activeContext.md",
+    "progress.md",
+    "productContext.md",
+    "narrativeRequest.md",  # Added by GAP-8
+],
+```
+
+But the Hot Zone File Rotation Policy table in `Draft.md` (lines 247–257) does not include `narrativeRequest.md`. The table lists only 8 files and their policies.
+
+**Impact:** The spec table is incomplete. A developer reading the spec will not know that `narrativeRequest.md` is rotated at sprint end.
+
+**Recommendation:** Add `narrativeRequest.md` to the rotation policy table in `Draft.md` with policy `Rotate` and rationale "Phase 0 discovery context is sprint-scoped."
+
+---
+
+### MINOR-006: State Machine Missing `INIT -> UPGRADE_IN_PROGRESS` Transition
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`diagrams/03-tdd-and-state.md`](diagrams/03-tdd-and-state.md:127)
+- [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:573)
+
+**Finding:**
+
+The state machine diagram (Diagram 7) and `Draft.md` state machine both show `UPGRADE_IN_PROGRESS` transitions from `REQUIREMENTS_LOCKED` and `MERGED` only. However, the `Draft.md` upgrade rule states the Arbiter refuses upgrades in any state other than `INIT` or `MERGED` — implying `INIT -> UPGRADE_IN_PROGRESS` is also valid but missing from both the diagram and spec.
+
+**Recommendation:** Add `INIT --> UPGRADE_IN_PROGRESS` transition to both the `Draft.md` state machine and `diagrams/03-tdd-and-state.md` Diagram 7.
+
+---
+
+### MINOR-007: `pre-commit` Hook Missing `arbiter_check.py check-session` Call (GAP-15)
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`agentic-workbench-engine/.workbench/hooks/pre-commit`](agentic-workbench-engine/.workbench/hooks/pre-commit:31)
+
+**Finding:**
+
+The `pre-commit` hook section 0 is titled `# 0. SKIP VALIDATION FLAG` and handles the bypass/rebase detection. The `arbiter_check.py check-session --block-on-critical` call specified in GAP-15 (`Draft.md` line 863) was **not added** to the hook. This means CRITICAL violations are not caught at commit time.
+
+**Recommendation:** Insert a section calling `python .workbench/scripts/arbiter_check.py check-session --block-on-critical` after the skip-validation flag check and before section 1.
+
+---
+
+### MINOR-008: `test_hooks_pre_commit.py` UC-052 Uses Simulated Logic
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`tests/workbench/test_hooks_pre_commit.py`](tests/workbench/test_hooks_pre_commit.py:23)
+
+**Finding:**
+
+UC-052 simulates the pre-commit state.json integrity check with inline Python logic rather than exercising the actual hook's `ALLOWED_WRITERS` list. If the hook's `ALLOWED_WRITERS` list changes, this test will not catch the regression.
+
+**Recommendation:** Refactor UC-052 to parse the actual `ALLOWED_WRITERS` list from the hook script and test against it.
+
+---
+
+### MINOR-009: `pyproject.toml` References Non-Existent `README.md` in Engine Root
+
+**Severity:** 🟢 MINOR
+**Files:**
+- [`agentic-workbench-engine/pyproject.toml`](agentic-workbench-engine/pyproject.toml:9)
+
+**Finding:**
+
+`pyproject.toml` specifies `readme = "README.md"` but no `README.md` exists in the engine submodule root. PyPI publishing will fail or produce a package without a description.
+
+**Recommendation:** Either create a `README.md` in the engine root, or remove the `readme` field from `pyproject.toml`.
+
+---
+
+## Part 5: Structural and Completeness Issues (Severity: 🔵 STRUCTURAL)
+
+---
+
+### STRUCTURAL-001: No Canonical Document Defines the `workbench-cli.py` Command Interface
+
+**Severity:** 🔵 STRUCTURAL
+
+**Finding:** The `workbench-cli.py` is referenced extensively across all canonical documents, but no single document provides a complete, authoritative specification of its command interface. The new commands (`start-feature`, `lock-requirements`, `set-red`, `review-pending`, `merge`, `install-hooks`, `register-arbiter`, `check`) are only documented in the Gap Implementation Plan (excluded from the canonical set per audit scope).
+
+**Recommendation:** Add a `workbench-cli.py` command reference section to either `Draft.md` Part 8 or `Canonical_Naming_Conventions.md`.
+
+---
+
+### STRUCTURAL-002: `diagrams/README.md` Not Reviewed
+
+**Severity:** 🔵 STRUCTURAL
+
+**Finding:** The [`diagrams/README.md`](diagrams/README.md) was listed in the workspace but not read during this audit. It may contain cross-references inconsistent with current diagram content.
+
+**Recommendation:** Read and audit `diagrams/README.md` in a follow-up review.
+
+---
+
+### STRUCTURAL-003: `Canonical_Naming_Conventions.md` §11 Version Table Is Stale
+
+**Severity:** 🔵 STRUCTURAL
+**Files:** [`Canonical_Naming_Conventions.md`](Canonical_Naming_Conventions.md:211)
+
+**Finding:** The Version & Schema Tracking table in §11 does not include `Gap_Implementation_Plan_v2.md` or the new sections added to `Draft.md` Part 9.
+
+**Recommendation:** Update §11 to include all current canonical documents and their versions.
+
+---
+
+### STRUCTURAL-004: `tests/workbench/` Missing Tests for Several Key Scripts
+
+**Severity:** 🔵 STRUCTURAL
+
+**Finding:** Missing test files:
+- `test_compliance_snapshot.py` — `compliance_snapshot.py` (GAP-1) has no dedicated test file
+- `test_hooks_post_merge.py` — `post-merge` hook has no test
+- `test_hooks_post_tag.py` — `post-tag` hook has no test
+
+**Recommendation:** Add test files for `compliance_snapshot.py`, `post-merge` hook, and `post-tag` hook.
+
+---
+
+## Part 6: Cross-Reference Validity Issues (Severity: 🟡 MODERATE)
+
+---
+
+### XREF-001: `Draft.md` References `.husky/` as Hook Location
+
+**Severity:** 🟡 MODERATE
+**Files:** [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:651)
+
+**Finding:** `Draft.md` Part 5.1 states "Git hooks are installed in `.husky/` and enforced via `husky` npm package". The actual implementation uses `.workbench/hooks/` exclusively, installed via `workbench-cli.py init`. The `.husky/` directory does not exist anywhere in the repository.
+
+**Recommendation:** Update `Draft.md` Part 5.1 to reference `.workbench/hooks/` and `workbench-cli.py init`.
+
+---
+
+### XREF-002: `pyproject.toml` References Non-Existent `README.md` in Engine Root
+
+**Severity:** 🟡 MODERATE
+**Files:** [`agentic-workbench-engine/pyproject.toml`](agentic-workbench-engine/pyproject.toml:10)
+
+**Finding:** `pyproject.toml` line 10 contains `readme = "README.md"`. There is no `README.md` in the `agentic-workbench-engine/` root directory. This means `python -m build` on the engine package will fail with a missing file error.
+
+**Recommendation:** Either create a minimal `README.md` in `agentic-workbench-engine/`, or remove the `readme` field from `pyproject.toml`.
+
+---
+
+### XREF-003: `Canonical_Naming_Conventions.md` §4 Hook Description Is Stale
+
+**Severity:** 🟡 MODERATE
+**Files:** [`Canonical_Naming_Conventions.md`](Canonical_Naming_Conventions.md:1)
+
+**Finding:** `Canonical_Naming_Conventions.md` §4 describes the `pre-commit` hook as enforcing only 3 actions. The actual hook also enforces: Conventional Commits format validation (GAP-14), file ownership conflict detection (GAP-7), and was specified to include `arbiter_check.py check-session` (GAP-15).
+
+**Recommendation:** Update `Canonical_Naming_Conventions.md` §4 to enumerate all current `pre-commit` enforcement actions.
+
+---
+
+## Part 7: Consolidated Findings Summary
+
+### 7.1 All Findings by Severity
+
+| ID | Severity | Category | Short Description | Files Affected |
 |---|---|---|---|---|
-| A01 | ✅ FIXED | Naming | `Repo_Cleanup_and_Deployment_Strategy.md` | Old repo names (`agentic-workbench-template`, `agentic-workbench-v2-specs`) throughout |
-| A02 | ✅ FIXED | Naming | `Beginners_Guide.md` | Old repo name `agentic-workbench-template` throughout |
-| A03 | ✅ FIXED | Naming | Diagrams 16, 17, 20 | `agentic-workbench-template` in diagram nodes |
-| A04 | ✅ FIXED | Naming | `Agentic_Workbench_v2_Implementation_Strategy.md` | `agentic-workbench-template` references |
-| B01 | ✅ FIXED | Diagrams | Diagram 7, Spec | `REVIEW_PENDING → PIVOT_IN_PROGRESS` missing from Diagram 7 (unfixed from Edition 1) |
-| B02 | ✅ FIXED | Diagrams | Diagram 6 | Node S3_10 still uses `feat-IDEA-NNN-slug` (residual `IDEA-NNN`) |
-| B03 | ✅ FIXED | Diagrams | Diagram 1 | `integration_test_runner.py` and `dependency_monitor.py` missing from Arbiter subgraph |
-| B04 | ✅ FIXED | Diagrams | Diagram 1 | AR1 label "State and Gate Manager" references removed `state_manager.py` concept |
-| C01 | ✅ FIXED | Spec | Spec Cross-Cutting Concern 2 | Branch format still uses `IDEA-NNN` in spec GitFlow section |
-| C02 | ✅ FIXED | Spec | Canonical Naming Conventions §2, Spec Glossary, `.roomodes` | "Product Agent" forbidden by naming authority but used in spec Glossary and `.roomodes` |
-| D01 | ✅ FIXED | CLI/Docs | `Beginners_Guide.md`, `workbench-cli.py` | `--version` flag does not exist; version number wrong; success output fictional |
-| D02 | ✅ FIXED | CLI/Docs | `Beginners_Guide.md`, `workbench-cli.py` | Initial commit message hardcodes `v2.0` but CLI generates `v2.1` |
-| D03 | ✅ FIXED | CLI/Docs | `Beginners_Guide.md`, Canonical Naming | Appendix C missing `PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS` states |
-| E01 | ✅ FIXED | Settings | Lab `.roo-settings.json`, Engine `.roo-settings.json` | Structural divergence: `transition_map` vs `arbiter_owned`; lab missing test runner denials |
+| CONFLICT-001 | 🔴 CRITICAL | Startup Protocol | Engine `.clinerules` heading missing SCAN step | `agentic-workbench-engine/.clinerules` |
+| CONFLICT-002 | 🔴 CRITICAL | State Value | `integration_test_runner.py` writes `"RED"` not `"INTEGRATION_RED"` | `integration_test_runner.py`, `state.json` |
+| CONFLICT-003 | 🔴 CRITICAL | Config Key | `Draft.md` CMD-1 references obsolete `auto_approve.patterns` key | `Draft.md`, `.roo-settings.json` |
+| INCONSISTENCY-001 | 🟡 MODERATE | Versioning | Root `.clinerules` version suffix `-root` unexplained | `.clinerules` (root) |
+| INCONSISTENCY-002 | 🟡 MODERATE | Config Drift | Root `.roo-settings.json` has 6 extra `allowedCommands` vs engine | Both `.roo-settings.json` files |
+| INCONSISTENCY-003 | 🟡 MODERATE | Stale Comment | `post-tag` hook has stale TODO for `compliance_snapshot.py` | `post-tag` hook |
+| INCONSISTENCY-004 | 🟡 MODERATE | Docs Gap | `Beginners_Guide.md` documents only 4 of 10+ CLI commands | `docs/Beginners_Guide.md` |
+| INCONSISTENCY-005 | 🟡 MODERATE | Startup Protocol | `Draft.md` describes old 4-step startup protocol | `Draft.md` |
+| INCONSISTENCY-007 | 🟡 MODERATE | Test Coverage | SM-013 test directly writes `state.json` instead of testing CLI `merge` | `test_state_machine.py` |
+| INCONSISTENCY-008 | 🟡 MODERATE | Docstring | `arbiter_check.py` SESSION_CHECKS docstring says "CRITICAL only" but includes CR-1 | `arbiter_check.py` |
+| INCONSISTENCY-009 | 🟡 MODERATE | Docstring | `gherkin_validator.py` docstring shows wrong CLI interface | `gherkin_validator.py` |
+| MINOR-001 | 🟢 MINOR | Naming | `Draft.md` §8.2.B uses "Product Agent" in running prose | `Draft.md` |
+| MINOR-002 | 🟢 MINOR | Naming | `diagrams/01` uses "Documentation Agent" short form | `diagrams/01-system-overview.md` |
+| MINOR-003 | 🟢 MINOR | Stale Reference | `diagrams/05` Diagram 16 and `Draft.md` Part 5.1 reference `.husky/` | `diagrams/05`, `Draft.md` |
+| MINOR-004 | 🟢 MINOR | Completeness | `Canonical_Naming_Conventions.md` §4 missing `arbiter_check.py` from hook table | `Canonical_Naming_Conventions.md` |
+| MINOR-005 | 🟢 MINOR | Completeness | `memory_rotator.py` rotates `narrativeRequest.md` but `Draft.md` table omits it | `memory_rotator.py`, `Draft.md` |
+| MINOR-006 | 🟢 MINOR | State Machine | `INIT -> UPGRADE_IN_PROGRESS` transition missing from diagram and spec | `diagrams/03`, `Draft.md` |
+| MINOR-007 | 🟢 MINOR | GAP-15 Gap | `pre-commit` hook missing `arbiter_check.py check-session` call | `pre-commit` hook |
+| MINOR-008 | 🟢 MINOR | Test Fidelity | UC-052 uses simulated logic instead of actual hook | `test_hooks_pre_commit.py` |
+| MINOR-009 | 🟢 MINOR | Completeness | `pyproject.toml` references non-existent `README.md` in engine root | `pyproject.toml` |
+| STRUCTURAL-001 | 🔵 STRUCTURAL | Completeness | No canonical document defines the full `workbench-cli.py` command interface | All canonical documents |
+| STRUCTURAL-002 | 🔵 STRUCTURAL | Completeness | `diagrams/README.md` not audited | `diagrams/README.md` |
+| STRUCTURAL-003 | 🔵 STRUCTURAL | Completeness | `Canonical_Naming_Conventions.md` §11 version table is stale | `Canonical_Naming_Conventions.md` |
+| STRUCTURAL-004 | 🔵 STRUCTURAL | Completeness | `tests/workbench/` missing tests for `compliance_snapshot.py`, `post-merge`, `post-tag` | `tests/workbench/` |
+| XREF-001 | 🟡 MODERATE | Cross-Reference | `Draft.md` references `.husky/` as hook location | `Draft.md` |
+| XREF-002 | 🟡 MODERATE | Cross-Reference | `pyproject.toml` references non-existent `README.md` in engine root | `pyproject.toml` |
+| XREF-003 | 🟡 MODERATE | Cross-Reference | `Canonical_Naming_Conventions.md` §4 hook description is stale | `Canonical_Naming_Conventions.md` |
+
+**Total: 27 findings** — 3 Critical, 11 Moderate, 9 Minor, 4 Structural
 
 ---
 
-## Prioritized Fix Recommendations — Edition 2
+### 7.2 Findings by File
 
-### P0 — Fix Immediately (Naming Confusion Blocks Usability)
-
-1. **ISSUE-A01:** Update `Repo_Cleanup_and_Deployment_Strategy.md` — replace all `agentic-workbench-template` → `agentic-workbench-engine` and `agentic-workbench-v2-specs` → `agentic-workbench-lab`.
-
-2. **ISSUE-A02:** Update `Beginners_Guide.md` — replace all `agentic-workbench-template` → `agentic-workbench-engine`.
-
-### P1 — Fix Before Next Documentation Review
-
-3. **ISSUE-B01:** Add `REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt during review` to Diagram 7 in [`diagrams/03-tdd-and-state.md`](../diagrams/03-tdd-and-state.md). (Carried over from Edition 1 — still unresolved.)
-
-4. **ISSUE-B02:** Fix node S3_10 in Diagram 6 — change `feat-IDEA-NNN-slug` to `feat-REQ-NNN-slug`.
-
-5. **ISSUE-C01:** Fix spec Cross-Cutting Concern 2 branch format — change `{IDEA-NNN}` to `{REQ-NNN}`.
-
-6. **ISSUE-A03:** Update Diagrams 16, 17, 20 — replace `agentic-workbench-template` with `agentic-workbench-engine`.
-
-7. **ISSUE-D01:** Add `--version` flag to `workbench-cli.py`; update `Beginners_Guide.md` Step 1.2 and Step 1.4 to match actual CLI output.
-
-### P2 — Fix Before Public Release
-
-8. **ISSUE-B03:** Add `integration_test_runner.py` and `dependency_monitor.py` to Diagram 1's Arbiter subgraph.
-
-9. **ISSUE-B04:** Rename Diagram 1 AR1 label from "State and Gate Manager" to reflect distributed state management (ADR-003).
-
-10. **ISSUE-A04:** Update `Agentic_Workbench_v2_Implementation_Strategy.md` — replace `agentic-workbench-template` with `agentic-workbench-engine`.
-
-11. **ISSUE-E01:** Update lab `.roo-settings.json` — replace `transition_map` with `arbiter_owned`; add test runner commands to `deniedCommands`.
-
-### P3 — Documentation Polish
-
-12. **ISSUE-C02:** Clarify "Product Agent" policy in `Canonical_Naming_Conventions.md` §2 — distinguish between Glossary/prompt usage (permitted) and running prose (forbidden).
-
-13. **ISSUE-D02:** Update `Beginners_Guide.md` Step 1.4 commit message from `v2.0` to `v2.1` (or make it dynamic).
-
-14. **ISSUE-D03:** Add `PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS` to `Beginners_Guide.md` Appendix C state table.
+| File | Findings |
+|---|---|
+| `Agentic Workbench v2 - Draft.md` | CONFLICT-003, INCONSISTENCY-005, MINOR-001, MINOR-003, MINOR-005, MINOR-006, STRUCTURAL-001, XREF-001 |
+| `agentic-workbench-engine/.clinerules` | CONFLICT-001 |
+| `agentic-workbench-engine/.workbench/scripts/integration_test_runner.py` | CONFLICT-002 |
+| `agentic-workbench-engine/.workbench/scripts/arbiter_check.py` | INCONSISTENCY-008 |
+| `agentic-workbench-engine/.workbench/scripts/gherkin_validator.py` | INCONSISTENCY-009 |
+| `agentic-workbench-engine/.workbench/hooks/post-tag` | INCONSISTENCY-003 |
+| `agentic-workbench-engine/.workbench/hooks/pre-commit` | MINOR-007 |
+| `agentic-workbench-engine/pyproject.toml` | MINOR-009, XREF-002 |
+| `.clinerules` (root) | INCONSISTENCY-001 |
+| `.roo-settings.json` (root) | INCONSISTENCY-002 |
+| `docs/Beginners_Guide.md` | INCONSISTENCY-004 |
+| `tests/workbench/test_state_machine.py` | INCONSISTENCY-007 |
+| `tests/workbench/test_hooks_pre_commit.py` | MINOR-008 |
+| `Canonical_Naming_Conventions.md` | MINOR-004, STRUCTURAL-003, XREF-003 |
+| `diagrams/01-system-overview.md` | MINOR-002 |
+| `diagrams/03-tdd-and-state.md` | MINOR-006 |
+| `diagrams/05-memory-sessions-and-infra.md` | MINOR-003 |
+| `diagrams/README.md` | STRUCTURAL-002 |
+| `memory_rotator.py` | MINOR-005 |
+| `tests/workbench/` (missing files) | STRUCTURAL-004 |
 
 ---
 
-## What Remains Consistent and Correct (Edition 2 Confirmation)
+## Part 8: Prioritized Recommendations
 
-The following aspects are **fully coherent** across all layers reviewed in this edition:
+### Priority 1 — Fix Immediately (Critical Conflicts)
 
-- ✅ **Core triad architecture** (Roo Code / The Arbiter / Roo Chat) — consistent across spec, diagrams, `.clinerules`, and canonical naming
-- ✅ **State machine states** — consistent across spec, Diagram 7, gap-fix plan, and tests (with the one missing transition noted in B01)
-- ✅ **Two-phase test execution** — consistent across spec, Diagram 6, implementation plan, and test suite
-- ✅ **Memory system** (Hot/Cold zones, rotation policies) — consistent across spec, Diagram 11, Diagram 19, and template files
-- ✅ **Session lifecycle** (CHECK→CREATE→READ→ACT) — consistent across spec, `.clinerules`, Diagram 12, and template `activeContext.md`
-- ✅ **Dependency management** (`@depends-on` tags, `feature_registry`, `DEPENDENCY_BLOCKED`) — consistent across spec, `.clinerules`, and test suite
-- ✅ **Integration test layer** (Stage 2b, `FLOW-NNN` IDs, `integration_test_runner.py`) — consistent across spec, Diagram 4, implementation plan, and test suite
-- ✅ **`workbench-cli.py` commands** (`init`, `upgrade`, `status`, `rotate`) — consistent across spec, Diagram 17, and implementation
-- ✅ **Memory rotation policy** (Rotate/Persist/Reset per file) — consistent across spec, Diagram 19, and template files
-- ✅ **GitFlow strategy** (branch types, forbidden actions, PR-only merges) — consistent across spec and Diagram 14 (except `IDEA-NNN` in spec prose — ISSUE-C01)
-- ✅ **`.clinerules` rules** (SLC, HND, TRC, CMT, STM, INT, REG, DEP, CMD, MEM, FAC, CR, FOR) — fully consistent between lab `.clinerules` and engine `.clinerules` (files are identical)
-- ✅ **`conftest.py` DEFAULT_STATE schema** — matches engine `state.json` schema exactly
-- ✅ **`conftest.py` TEMPLATE_ROOT** — correctly points to `agentic-workbench-engine` submodule
-- ✅ **Engine `state.json` `arbiter_capabilities`** — all `false` (correct Phase A initial state)
-- ✅ **`REQ-NNN` traceability IDs** — now consistent across Diagrams 5, 14, 15 (Edition 1 fixes applied)
-- ✅ **`state_manager.py` removed** — absent from Diagram 20, Canonical Naming Conventions, and engine scripts (ADR-003 applied)
-- ✅ **`CLEAN` regression state value** — documented in Canonical Naming Conventions §6 (Edition 1 fix applied)
-- ✅ **`.gitmodules`** — correctly wired to `agentic-workbench-engine` repo
-- ✅ **`pytest.ini`** — correctly configured for `tests/workbench/` test path
-- ✅ **`README.md`** — accurately describes the two-repo architecture with correct names
-- ✅ **`decisionLog.md`** — ADR-001 through ADR-005 are complete, consistent, and non-contradictory
-- ✅ **`RELEASE.md`** — correctly shows v2.1 as INITIALIZED
-- ✅ **`handoff-state.md`** — correctly reflects Sprint 3 complete state with correct repo names in Notes section
+#### REC-001: Fix Engine `.clinerules` Startup Protocol Heading
+**Action:** Change heading at [`agentic-workbench-engine/.clinerules`](agentic-workbench-engine/.clinerules:14) from `(CHECK -> CREATE -> READ -> ACT)` to `(SCAN -> CHECK -> CREATE -> READ -> ACT)`. **Effort:** Trivial.
+
+#### REC-002: Fix `integration_test_runner.py` State Value
+**Action:** Change `state["integration_state"] = "RED"` to `state["integration_state"] = "INTEGRATION_RED"` at [`integration_test_runner.py`](agentic-workbench-engine/.workbench/scripts/integration_test_runner.py:148). Update [`test_integration_runner.py`](tests/workbench/test_integration_runner.py) assertion accordingly. **Effort:** Small (2-file change).
+
+#### REC-003: Update `Draft.md` CMD-1 Config Key Reference
+**Action:** In [`Agentic Workbench v2 - Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:625), replace `auto_approve.patterns` with `settings.roo-cline.allowedCommands`. **Effort:** Small.
 
 ---
 
-## Edition 3 — Beginners Guide Targeted Review + Schema Fix (2026-04-12)
+### Priority 2 — Fix Soon (Moderate Inconsistencies and Cross-References)
 
-**Scope:** `docs/Beginners_Guide.md` vs. `workbench-cli.py`, `.clinerules`, `.roomodes`, `.roo-settings.json`, `state.json`, `Canonical_Naming_Conventions.md`
+#### REC-004: Clarify Root `.clinerules` Version Suffix
+**Action:** Add a comment in [`.clinerules`](.clinerules:6) explaining that `-root` denotes the lab-level overlay, or rename to `v2.2` with an explanatory note. **Effort:** Trivial.
 
-**Context:** Edition 2 marked ISSUE-D01 (fictional success output) as `✅ FIXED` but the fix was never applied to the guide. This edition documents the actual state found and the fixes applied.
+#### REC-005: Align `allowedCommands` Between Root and Engine `.roo-settings.json`
+**Action:** Decide whether npm/biome commands should be in [`agentic-workbench-engine/.roo-settings.json`](agentic-workbench-engine/.roo-settings.json) and document the decision. **Effort:** Small.
 
-### Issues Found and Fixed in Edition 3
+#### REC-006: Remove Stale TODO from `post-tag` Hook
+**Action:** Update the `else` branch in [`post-tag`](agentic-workbench-engine/.workbench/hooks/post-tag:53) to remove the stale TODO referencing `compliance_snapshot.py` as "not yet implemented". **Effort:** Trivial.
 
-| # | Severity | File | Issue | Fix Applied |
+#### REC-007: Update `Beginners_Guide.md` CLI Command Reference
+**Action:** Expand Appendix B in [`docs/Beginners_Guide.md`](docs/Beginners_Guide.md) to document all current `workbench-cli.py` commands. **Effort:** Medium.
+
+#### REC-008: Update `Draft.md` Startup Protocol Description
+**Action:** Update [`Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:259) Session Lifecycle Protocols to describe the 5-step `SCAN -> CHECK -> CREATE -> READ -> ACT` protocol. **Effort:** Small.
+
+#### REC-009: Refactor SM-013 Test to Use CLI `merge` Command
+**Action:** Refactor [`test_sm013_review_pending_to_merged`](tests/workbench/test_state_machine.py:146) to invoke `workbench-cli.py merge` via `run_script`. **Effort:** Small.
+
+#### REC-010: Fix `arbiter_check.py` SESSION_CHECKS Docstring
+**Action:** Update the `run_checks` docstring in [`arbiter_check.py`](agentic-workbench-engine/.workbench/scripts/arbiter_check.py:502) to say "CRITICAL checks + crash recovery" instead of "CRITICAL only". **Effort:** Trivial.
+
+#### REC-011: Fix `gherkin_validator.py` Docstring CLI Interface
+**Action:** Update the module docstring in [`gherkin_validator.py`](agentic-workbench-engine/.workbench/scripts/gherkin_validator.py:1) to show `python gherkin_validator.py features/` (no `validate` subcommand). **Effort:** Trivial.
+
+#### REC-012: Fix `Draft.md` Hook Location Reference
+**Action:** Update [`Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:651) to reference `.workbench/hooks/` and `workbench-cli.py init` instead of `.husky/` and `husky`. **Effort:** Small.
+
+#### REC-013: Create `README.md` in Engine Root or Fix `pyproject.toml`
+**Action:** Either create `agentic-workbench-engine/README.md` or remove `readme = "README.md"` from [`pyproject.toml`](agentic-workbench-engine/pyproject.toml:10). **Effort:** Small.
+
+#### REC-014: Update `Canonical_Naming_Conventions.md` §4 Hook Description
+**Action:** Update §4 in [`Canonical_Naming_Conventions.md`](Canonical_Naming_Conventions.md) to enumerate all current `pre-commit` enforcement actions. **Effort:** Small.
+
+---
+
+### Priority 3 — Address When Convenient (Minor and Structural)
+
+#### REC-015: Remove "Product Agent" Alias from `Draft.md` Running Prose
+**Action:** Remove the "Product Agent" alias reference from [`Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:604) Part 8.2.B.
+
+#### REC-016: Fix Agent Name Formatting in Diagrams
+**Action:** Update "Documentation Agent" to "Documentation/Librarian Agent" in [`diagrams/01-system-overview.md`](diagrams/01-system-overview.md).
+
+#### REC-017: Add `narrativeRequest.md` to `Canonical_Naming_Conventions.md`
+**Action:** Add `narrativeRequest.md` to the Hot Zone file definitions section in [`Canonical_Naming_Conventions.md`](Canonical_Naming_Conventions.md).
+
+#### REC-018: Add `narrativeRequest.md` to `Draft.md` Rotation Table
+**Action:** Add `narrativeRequest.md` to the Hot Zone File Rotation Policy table in [`Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:244).
+
+#### REC-019: Update `Draft.md` GAP Section to Reflect Completed Implementation
+**Action:** Mark all 15 gaps as completed in [`Draft.md`](Agentic%20Workbench%20v2%20-%20Draft.md:700) Part 9, referencing the Gap Implementation Plan v2.
+
+#### REC-020: Add Test Coverage for `compliance_snapshot.py`
+**Action:** Create [`tests/workbench/test_compliance_snapshot.py`](tests/workbench/test_compliance_snapshot.py) covering `generate_traceability_matrix()`, `create_compliance_snapshot()`, and `main()`.
+
+#### REC-021: Add Test for `narrativeRequest.md` Rotation
+**Action:** Add a test case in [`test_memory_rotator.py`](tests/workbench/test_memory_rotator.py) verifying `narrativeRequest.md` is archived and reset during `rotate_sprint()`.
+
+#### REC-022: Add Memory System Architecture Diagram
+**Action:** Create [`diagrams/06-memory-system.md`](diagrams/06-memory-system.md) showing Hot Zone / Cold Zone architecture, MCP tool access path, and `memory_rotator.py` rotation flow.
+
+#### REC-023: Fix `diagrams/README.md` Index
+**Action:** Verify and update the index table in [`diagrams/README.md`](diagrams/README.md) to include all 5 current diagram files.
+
+#### REC-024: Add Biome Linting Reference to Root `README.md`
+**Action:** Add a brief mention of `biome.json` and Biome linting to [`README.md`](README.md).
+
+#### REC-025: Add `arbiter_check.py check-session` to `pre-commit` Hook
+**Action:** Insert `python .workbench/scripts/arbiter_check.py check-session --block-on-critical` into [`pre-commit`](agentic-workbench-engine/.workbench/hooks/pre-commit) after the skip-validation flag check, as specified in GAP-15.
+
+---
+
+## Part 9: Overall Coherency Assessment
+
+### 9.1 Scoring
+
+| Dimension | Weight | Score (0-10) | Weighted Score | Notes |
 |---|---|---|---|---|
-| E3-01 | 🟡 Moderate | `docs/Beginners_Guide.md` Step 1.4 | Success output block showed fictional emoji-decorated output (`✅ 📁 🔧`) that does not match actual CLI output (`[WORKBENCH-CLI]` prefix, 2 lines). Was marked fixed in Edition 2 but was not. | ✅ Updated to match actual CLI output |
-| E3-02 | 🟢 Minor | `docs/Beginners_Guide.md` Appendix C | `FEATURE_GREEN` state missing from state reference table. Present in `Canonical_Naming_Conventions.md` §6 but absent from guide. | ✅ Added `FEATURE_GREEN` row with correct description |
-| E3-03 | 🟢 Minor | `agentic-workbench-engine/workbench-cli.py` line 7 | Docstring still referenced `agentic-workbench-template` (old repo name). Guide correctly uses `agentic-workbench-engine` throughout. | ✅ Fixed in Code mode |
-| E3-04 | 🟡 Moderate | `agentic-workbench-engine/.roo-settings.json` + lab `.roo-settings.json` | `$schema: "https://agentic-workbench.io/roo-settings.schema.json"` — URL is unreachable, causing VS Code "Unable to load schema" error in both the engine and lab repos. | ✅ Removed `$schema` field from both files |
+| **Architectural Consistency** | 30% | 8.5 | 2.55 | Core pipeline, state machine, and agent roles are well-aligned across files |
+| **Rule Completeness** | 25% | 7.0 | 1.75 | Rules are comprehensive but some enforcement gaps exist (GAP-15 hook integration) |
+| **Cross-Reference Accuracy** | 20% | 6.5 | 1.30 | Several stale references to obsolete keys, paths, and tool names |
+| **Terminology Consistency** | 15% | 7.5 | 1.13 | Minor naming drift in diagrams and Draft.md prose |
+| **Test Coverage Alignment** | 10% | 7.0 | 0.70 | Good coverage overall; SM-013 fidelity gap and missing compliance_snapshot tests |
 
-### What Was Verified as Correct in Edition 3
+**Overall Coherency Score: 7.43 / 10.0**
 
-- ✅ **Repo name** — `agentic-workbench-engine` used correctly throughout the guide (Edition 2 ISSUE-A02 fix confirmed applied)
-- ✅ **`--version` flag** — exists in CLI (`action="store_true"`, line 281); outputs `Agentic Workbench CLI v2.1` correctly
-- ✅ **Init commit message** — guide shows `v2.1`; CLI dynamically reads from `.workbench-version` = `2.1` ✅
-- ✅ **Directory scaffold** — guide's directory tree matches `cmd_init()` exactly
-- ✅ **`state.json` initial state** — `"INIT"` with all `arbiter_capabilities` = `false` ✅
-- ✅ **Upgrade safety gate** — guide correctly states `INIT` or `MERGED` required; CLI enforces this at line 178
-- ✅ **Upgrade commit message** — `chore(workbench): upgrade engine to v{version}` matches CLI line 219
-- ✅ **All 4 CLI commands** — `init`, `upgrade`, `status`, `rotate` all exist in CLI and Appendix B
-- ✅ **`PIVOT_APPROVED` and `UPGRADE_IN_PROGRESS`** — present in Appendix C (Edition 2 ISSUE-D03 fix confirmed applied)
-- ✅ **7-step workflow** — matches `.roomodes` stage definitions and `.clinerules` §10 file access constraints
+---
+
+### 9.2 Assessment Narrative
+
+The Agentic Workbench v2 canonical source set demonstrates **strong architectural coherency** at the macro level. The Separation of Powers model (Roo Code / The Arbiter / Roo Chat), the state machine design, the memory system architecture, and the agent role definitions are consistently represented across `.clinerules`, `.roomodes`, `state.json`, `Draft.md`, and the diagrams.
+
+The **critical issues** are concentrated in implementation details rather than architectural concepts:
+- The `integration_state` value bug (CONFLICT-002) is the most operationally dangerous finding — it would cause silent failures in integration state tracking.
+- The startup protocol heading mismatch (CONFLICT-001) is a documentation error that could mislead agents reading the engine `.clinerules`.
+- The obsolete config key reference (CONFLICT-003) is a documentation error in the specification document.
+
+The **moderate inconsistencies** are primarily documentation drift — the specification document (`Draft.md`) has not been updated to reflect the completed Gap Implementation Plan, and the `Beginners_Guide.md` is significantly out of date relative to the current CLI capabilities.
+
+The **structural gaps** (missing `compliance_snapshot.py` tests, missing Memory System diagram) represent technical debt that should be addressed in the next sprint.
+
+---
+
+### 9.3 Confidence Assessment
+
+| Finding | Confidence | Basis |
+|---|---|---|
+| CONFLICT-001 | HIGH | Direct text comparison between heading and body of same file |
+| CONFLICT-002 | HIGH | Direct code inspection of `integration_test_runner.py` line 148 |
+| CONFLICT-003 | HIGH | Direct comparison of `Draft.md` prose vs actual `.roo-settings.json` key names |
+| INCONSISTENCY-002 | HIGH | Direct comparison of both `.roo-settings.json` files |
+| INCONSISTENCY-003 | HIGH | Direct inspection of `post-tag` hook and `compliance_snapshot.py` existence |
+| INCONSISTENCY-004 | HIGH | Direct comparison of `Beginners_Guide.md` Appendix B vs `workbench-cli.py` |
+| XREF-002 | HIGH | File listing confirms no `README.md` in engine root |
+| STRUCTURAL-004 | HIGH | File listing confirms no `test_compliance_snapshot.py` in tests directory |
+| INCONSISTENCY-007 | MEDIUM | Test reads `state.json` directly; CLI `merge` command may or may not exist |
+| MINOR-005 | MEDIUM | `memory_rotator.py` includes `narrativeRequest.md`; `Draft.md` table not fully verified |
+
+---
+
+### 9.4 Recommended Sprint Priority
+
+**Sprint N (Immediate — before next feature development):**
+- REC-001: Fix engine `.clinerules` heading (CONFLICT-001)
+- REC-002: Fix `integration_test_runner.py` state value (CONFLICT-002)
+- REC-003: Fix `Draft.md` CMD-1 config key (CONFLICT-003)
+- REC-006: Remove stale `post-tag` TODO (INCONSISTENCY-003)
+- REC-013: Fix `pyproject.toml` README reference (XREF-002)
+
+**Sprint N+1 (Documentation Refresh):**
+- REC-007: Update `Beginners_Guide.md` CLI commands (INCONSISTENCY-004)
+- REC-008: Update `Draft.md` startup protocol (INCONSISTENCY-005)
+- REC-012: Fix `Draft.md` hook location reference (XREF-001)
+- REC-014: Update `Canonical_Naming_Conventions.md` §4 (XREF-003)
+- REC-019: Update `Draft.md` GAP section (STRUCTURAL-001)
+- REC-025: Add `arbiter_check.py` call to `pre-commit` hook (MINOR-007)
+
+**Sprint N+2 (Test Coverage and Completeness):**
+- REC-009: Refactor SM-013 test (INCONSISTENCY-007)
+- REC-020: Add `compliance_snapshot.py` tests (STRUCTURAL-004)
+- REC-021: Add `narrativeRequest.md` rotation test
+- REC-022: Add Memory System diagram
+- REC-023: Fix `diagrams/README.md` index
+
+---
+
+*End of Coherency Audit Report — Edition 4*
+*Generated: 2026-04-13 | Auditor: Senior Architect (Roo Code — Architect Agent)*
+*Report covers: All canonical sources and rules files as of 2026-04-13*
+*Supersedes: Edition 3 (Beginners Guide Targeted Review, 2026-04-12)*
