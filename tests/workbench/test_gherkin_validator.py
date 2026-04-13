@@ -117,3 +117,107 @@ class TestGherkinValidator:
         exit_code, stdout, stderr = run_script("gherkin_validator", "/nonexistent/path/")
         assert exit_code == 1
         assert "Directory not found" in stderr or "Directory not found" in stdout
+
+
+# ============================================================================
+# GAP-13: @depends-on warning vs error tests
+# ============================================================================
+
+class TestDependsOnValidation:
+    """GAP-13b/c/d: @depends-on warning vs error behavior tests."""
+
+    def test_gap13b_depends_on_non_merged_dep_in_registry_produces_error(
+        self, temp_workbench, state_factory, feature_factory, run_script
+    ):
+        """GAP-13b: @depends-on referencing non-MERGED feature in registry → error."""
+        # Create state with REQ-001 in RED state (not MERGED)
+        state_factory(
+            state="RED",
+            feature_registry={
+                "REQ-001": {"state": "RED", "branch": "feature/S1/REQ-001", "depends_on": []}
+            }
+        )
+        
+        # Create REQ-002 feature with @depends-on: REQ-001
+        feature_factory(
+            "REQ-002-checkout.feature",
+            req_id="REQ-002",
+            feature_name="Checkout Flow",
+            scenarios=[
+                {
+                    "name": "User checks out",
+                    "steps": ["Given a user with items in cart", "When they complete checkout", "Then order is placed"]
+                }
+            ],
+            depends_on=["REQ-001"],
+        )
+        
+        exit_code, stdout, stderr = run_script("gherkin_validator", "features/")
+        
+        # Should fail (exit 1) because REQ-001 is in registry but not MERGED
+        assert exit_code == 1, f"Expected exit 1 (error), got {exit_code}\nstdout: {stdout}\nstderr: {stderr}"
+        combined = (stdout + stderr).lower()
+        assert "req-001" in combined
+        assert ("merged" in combined or "depends-on" in combined)
+
+    def test_gap13c_depends_on_unknown_dep_produces_warning_not_error(
+        self, temp_workbench, state_factory, feature_factory, run_script
+    ):
+        """GAP-13c: @depends-on referencing unknown feature → warning only (not error)."""
+        # Create state with empty registry (REQ-999 not registered)
+        state_factory(state="STAGE_1_ACTIVE", feature_registry={})
+        
+        # Create feature with @depends-on: REQ-999 (unknown)
+        feature_factory(
+            "REQ-002-checkout.feature",
+            req_id="REQ-002",
+            feature_name="Checkout Flow",
+            scenarios=[
+                {
+                    "name": "User checks out",
+                    "steps": ["Given a user with items in cart", "When they complete checkout", "Then order is placed"]
+                }
+            ],
+            depends_on=["REQ-999"],
+        )
+        
+        exit_code, stdout, stderr = run_script("gherkin_validator", "features/")
+        
+        # Should succeed (exit 0) — unknown dep is only a warning
+        assert exit_code == 0, f"Expected exit 0 (warning only), got {exit_code}\nstdout: {stdout}\nstderr: {stderr}"
+        combined = stdout + stderr
+        assert "req-999" in combined.lower()
+
+    def test_gap13d_depends_on_merged_dep_produces_no_errors(
+        self, temp_workbench, state_factory, feature_factory, run_script
+    ):
+        """GAP-13d: @depends-on referencing MERGED feature → no errors."""
+        # Create state with REQ-001 in MERGED state
+        state_factory(
+            state="RED",
+            feature_registry={
+                "REQ-001": {"state": "MERGED", "branch": "feature/S1/REQ-001", "depends_on": []}
+            }
+        )
+        
+        # Create REQ-002 feature with @depends-on: REQ-001 (MERGED)
+        feature_factory(
+            "REQ-002-checkout.feature",
+            req_id="REQ-002",
+            feature_name="Checkout Flow",
+            scenarios=[
+                {
+                    "name": "User checks out",
+                    "steps": ["Given a user with items in cart", "When they complete checkout", "Then order is placed"]
+                }
+            ],
+            depends_on=["REQ-001"],
+        )
+        
+        exit_code, stdout, stderr = run_script("gherkin_validator", "features/")
+        
+        # Should succeed with no error messages
+        assert exit_code == 0, f"Expected exit 0, got {exit_code}\nstdout: {stdout}\nstderr: {stderr}"
+        combined = (stdout + stderr).lower()
+        # Should not mention REQ-001 as an error
+        assert "req-001" not in combined or "warning" not in combined
