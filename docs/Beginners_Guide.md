@@ -43,11 +43,12 @@ You should see these key files:
 - `.roomodes` — custom agent modes
 - `.workbench/` — Arbiter scripts directory
 
-**Option B: Global pip install (future, not yet available)**
+**Option B: pip install — Local install supported**
 
 ```bash
-# Not yet published — coming soon
-pip install agentic-workbench-cli
+# Local install via pyproject.toml in agentic-workbench-engine/
+# PyPI publishing pending — coming soon
+pip install -e agentic-workbench-engine/
 ```
 
 ### Step 1.2: Add the CLI to your system PATH

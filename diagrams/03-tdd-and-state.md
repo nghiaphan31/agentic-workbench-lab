@@ -115,8 +115,6 @@ stateDiagram-v2
 
     REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt\nMid-stage requirements change\nduring review
 
-    REVIEW_PENDING --> PIVOT_IN_PROGRESS : Human submits Delta Prompt\nMid-stage requirements change\nduring review
-
     MERGED --> INIT : Next feature cycle begins\nstate reset
 
     STAGE_1_ACTIVE --> PIVOT_IN_PROGRESS : Human submits Delta Prompt\nMid-stage requirements change

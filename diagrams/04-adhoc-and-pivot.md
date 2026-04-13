@@ -1,4 +1,4 @@
-﻿# Agentic Workbench v2 â€” Ad Hoc Ideas, Pivot, Docs & HITL Gates Diagrams
+﻿# Agentic Workbench v2 — Ad Hoc Ideas, Pivot, Docs & HITL Gates Diagrams
 
 **Source:** [`Agentic Workbench v2 - Draft.md`](../Agentic%20Workbench%20v2%20-%20Draft.md)  
 **Generated:** 2026-04-12  
@@ -6,7 +6,7 @@
 
 ---
 
-## Diagram 8 â€” Phase 2: Ad Hoc Ideas Pipeline â€” Inbox vs Pivot
+## Diagram 8 — Phase 2: Ad Hoc Ideas Pipeline — Inbox vs Pivot
 
 > Two distinct flows for handling change: non-blocking quarantine for low-priority ideas, and controlled interruption for urgent pivots.
 
@@ -16,10 +16,12 @@ flowchart TD
 or change request]) --> CLASSIFY{Urgency
 assessment}
 
-    CLASSIFY -->|Low priority\nnon-blocking| INBOX_FLOW
-    CLASSIFY -->|Urgent or critical\nmust alter current work| PIVOT_FLOW
+    CLASSIFY -->|Low priority
+non-blocking| INBOX_FLOW
+    CLASSIFY -->|Urgent or critical
+must alter current work| PIVOT_FLOW
 
-    subgraph INBOX_FLOW["Case A â€” The Inbox: Non-Blocking Quarantine"]
+    subgraph INBOX_FLOW["Case A — The Inbox: Non-Blocking Quarantine"]
         direction TB
         IB1[Human submits raw shower thought
 via Roo Chat]
@@ -59,7 +61,7 @@ for future review]
         IB9 -->|deferred| IB12
     end
 
-    subgraph PIVOT_FLOW["Case B â€” The Pivot: Mid-Stage Interruption"]
+    subgraph PIVOT_FLOW["Case B — The Pivot: Mid-Stage Interruption"]
         direction TB
         PV1[Human submits Delta Prompt
 e.g. Add 2FA to reset flow]
@@ -101,7 +103,7 @@ until GREEN]
 
 ---
 
-## Diagram 9 â€” Phase 2 Case B: The Pivot Flow in Detail
+## Diagram 9 — Phase 2 Case B: The Pivot Flow in Detail
 
 > Detailed sequence showing the exact interactions, branch operations, and state transitions during a mid-stage requirements pivot.
 
@@ -176,13 +178,13 @@ sequenceDiagram
 
 ---
 
-## Diagram 10 â€” Phase 3: Documentation and Compliance Engine
+## Diagram 10 — Phase 3: Documentation and Compliance Engine
 
 > Continuous background documentation generation and triggered compliance snapshot protocol.
 
 ```mermaid
 flowchart TD
-    subgraph CONTINUOUS["Stage 1 â€” Continuous Format Shifting"]
+    subgraph CONTINUOUS["Stage 1 — Continuous Format Shifting"]
         direction LR
         REPO[Live Repository
 State] --> DOCAGENT[Documentation /
@@ -206,7 +208,7 @@ consumption layer]
         TOPO --> WIKI
     end
 
-    subgraph SNAPSHOT["Stage 2 â€” Compliance Snapshot Protocol"]
+    subgraph SNAPSHOT["Stage 2 — Compliance Snapshot Protocol"]
         direction TB
         DELIVERY[HITL Gate 2
 Delivery Gate
@@ -259,7 +261,7 @@ Immutable record]
 
 ---
 
-## Diagram 18 â€” HITL Gates: Human Decision Points Journey
+## Diagram 18 — HITL Gates: Human Decision Points Journey
 
 > Every point in the system where a human must make a decision. The human is elevated from writing code to directing the pipeline through three executive functions.
 
@@ -278,7 +280,7 @@ Provide final authorization
 to unlock progression gates]
     end
 
-    subgraph GATE0["Ideation Gate â€” Phase 0"]
+    subgraph GATE0["Ideation Gate — Phase 0"]
         G0_IN[Architect Agent presents
 Narrative Feature Request]
         G0_DEC{Human reviews
@@ -292,7 +294,7 @@ Agent refines narrative]
         G0_DEC -->|revise| G0_REJ --> G0_IN
     end
 
-    subgraph GATE1["HITL Gate 1 â€” Stage 1: Requirements Lock"]
+    subgraph GATE1["HITL Gate 1 — Stage 1: Requirements Lock"]
         G1_IN[Architect Agent presents
 Gherkin .feature files PR
 with REQ-IDs assigned]
@@ -310,7 +312,7 @@ and re-presents]
         G1_DEC -->|reject| G1_REJ --> G1_IN
     end
 
-    subgraph GATE15["HITL Gate 1.5 â€” Pivot Approval"]
+    subgraph GATE15["HITL Gate 1.5 — Pivot Approval"]
         G15_IN[Architect Agent presents
 Git diff on pivot/ branch
 showing .feature modifications]
@@ -328,7 +330,7 @@ and re-presents diff]
         G15_DEC -->|reject| G15_REJ --> G15_IN
     end
 
-    subgraph GATE2["HITL Gate 2 â€” Stage 4: Delivery"]
+    subgraph GATE2["HITL Gate 2 — Stage 4: Delivery"]
         G2_IN[Orchestrator presents full PR
 .feature + unit tests + integration tests + /src
 plus security scan report]
@@ -346,7 +348,7 @@ based on review feedback]
         G2_DEC -->|reject| G2_REJ --> G2_IN
     end
 
-    subgraph BACKLOG_GATE["Backlog Gate â€” Inbox Promotion"]
+    subgraph BACKLOG_GATE["Backlog Gate — Inbox Promotion"]
         BG_IN[Product Owner reviews
 _inbox/ @draft items
 asynchronously]
@@ -364,7 +366,8 @@ Remains in _inbox/]
 
     GATE0 --> GATE1
     GATE1 --> GATE2
-    GATE15 -.->|triggered by Delta Prompt\nduring active pipeline| GATE1
+    GATE15 -.->|triggered by Delta Prompt
+during active pipeline| GATE1
 
     style GATE0 fill:#d8f3dc,color:#1b4332,stroke:#2d6a4f
     style GATE1 fill:#d0e1f2,color:#1d3557,stroke:#457b9d
@@ -372,4 +375,3 @@ Remains in _inbox/]
     style GATE2 fill:#e6dcc8,color:#3d2b1f,stroke:#8b5e3c
     style BACKLOG_GATE fill:#e6dcc8,color:#3d2b1f,stroke:#8b5e3c
     style HUMAN_ROLE fill:#e8e4f0,color:#2c2c54,stroke:#706fd3
-```

@@ -65,6 +65,8 @@ These are deterministic programs owned by **The Arbiter**. Each script has exact
 | **`memory_rotator.py`** | "rotation.py", "Memory Rotator script" | Applies per-file rotation policy at sprint end |
 | **`audit_logger.py`** | "logger.py", "Audit Trail" | Saves immutable session metadata to `docs/conversations/` |
 | **`crash_recovery.py`** | "heartbeat.py", "Recovery Daemon" | Writes 5-minute heartbeat to `session-checkpoint.md` |
+| **`arbiter_check.py`** | "compliance_check.py", "Health Check" | Runs session startup compliance scan; checks for violations of `.clinerules` rules |
+| **`compliance_snapshot.py`** | "snapshot.py", "Compliance Report" | Generates compliance documentation (PDFs + Traceability Matrix) on tag events |
 
 ### Canonical Usage Rules
 
@@ -210,6 +212,6 @@ The following terms are **forbidden** in all specification and implementation do
 | `Agentic Workbench v2 - Draft.md` | v2.0 (updated 2026-04-12) | Architectural specification |
 | `Agentic_Workbench_v2_Implementation_Strategy.md` | v2.1 | Implementation sequence (Sprint 0–3) |
 | `Spec_Gap_Fix_Plan_Integration_NonRegression_CrossFeature.md` | v2.1 | Gap fixes incorporated into spec |
-| `Canonical_Naming_Conventions.md` | v2.1 | This document — single source of truth |
+| `Canonical_Naming_Conventions.md` | v2.1 | This document — single source of truth (self-referential) |
 
 Whenever a new feature or gap fix is incorporated into the spec, this naming conventions document should be updated to reflect any new named entities introduced.

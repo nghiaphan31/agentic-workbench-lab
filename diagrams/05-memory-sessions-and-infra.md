@@ -1,4 +1,4 @@
-﻿# Agentic Workbench v2 â€” Memory, Sessions & Infrastructure Diagrams
+﻿# Agentic Workbench v2 — Memory, Sessions & Infrastructure Diagrams
 
 **Source:** [`Agentic Workbench v2 - Draft.md`](../Agentic%20Workbench%20v2%20-%20Draft.md)  
 **Generated:** 2026-04-12  
@@ -6,13 +6,13 @@
 
 ---
 
-## Diagram 11 â€” Persistent Memory System: Hot/Cold Architecture
+## Diagram 11 — Persistent Memory System: Hot/Cold Architecture
 
 > The Hot/Cold memory architecture that counters AI drift and context-window flooding. Git is the single source of truth; every piece of memory is versioned.
 
 ```mermaid
 graph TB
-    subgraph HOT["Hot Zone â€” memory-bank/hot-context/ â€” Read directly by agent at session start"]
+    subgraph HOT["Hot Zone — memory-bank/hot-context/ — Read directly by agent at session start"]
         direction TB
         H1[activeContext.md — current task & ROTATE]
         H2[progress.md — project checkbox & ROTATE]
@@ -24,14 +24,14 @@ graph TB
         H8[session-checkpoint.md — crash recovery & RESET]
     end
 
-    subgraph COLD["Cold Zone â€” memory-bank/archive-cold/ â€” NEVER read directly by agent"]
+    subgraph COLD["Cold Zone — memory-bank/archive-cold/ — NEVER read directly by agent"]
         direction TB
         C1[archived-activeContext — timestamped]
         C2[archived-progress — timestamped]
         C3[archived-productContext — timestamped]
     end
 
-    subgraph MCP_TOOL["MCP Tool â€” Controlled Cold Access"]
+    subgraph MCP_TOOL["MCP Tool — Controlled Cold Access"]
         M1[Semantic search over cold archive]
         M2[Targeted retrieval by REQ-ID or date]
     end
@@ -41,7 +41,7 @@ graph TB
         AG2[Documentation / Librarian Agent]
     end
 
-    subgraph ARBITER_MEM["Arbiter â€” memory_rotator.py"]
+    subgraph ARBITER_MEM["Arbiter — memory_rotator.py"]
         AR1[Sprint-end rotation trigger]
         AR2[ROTATE: archive then reset to template]
         AR3[PERSIST: never moved]
@@ -91,9 +91,9 @@ Sessions ephemeral - Git is eternal]
 
 ---
 
-## Diagram 12 â€” Session Lifecycle: Startup and Close Protocols
+## Diagram 12 — Session Lifecycle: Startup and Close Protocols
 
-> The mandatory CHECK-CREATE-READ-ACT startup sequence and the Close Protocol that every agent must follow, enforced by `.clinerules`.
+> The mandatory startup sequence and the Close Protocol that every agent must follow, enforced by `.clinerules`.
 
 ```mermaid
 sequenceDiagram
@@ -105,7 +105,13 @@ sequenceDiagram
     participant Git as Git
     participant Docs as docs/conversations/
 
-    Note over Agent,Docs: STARTUP PROTOCOL â€” CHECK-CREATE-READ-ACT
+    Note over Agent,Docs: STARTUP PROTOCOL —
+    SCAN → CHECK → CREATE → READ → ACT
+
+    Agent->>Arbiter: SCAN: Run arbiter_check.py check-session
+    alt CRITICAL violation found
+        Agent->>Agent: RESOLVE before proceeding
+    end
 
     Agent->>HotZone: CHECK: Does activeContext.md exist?
 
@@ -122,11 +128,12 @@ sequenceDiagram
         Agent->>Agent: Offer to resume from checkpoint\nSession ID, branch, commit hash, task
     end
 
-    Note over Agent,Docs: ACT â€” Agent performs its pipeline stage work
+    Note over Agent,Docs: ACT —
+    Agent performs its pipeline stage work
 
     Agent->>Agent: Execute pipeline stage task
 
-    Note over Agent,Docs: CLOSE PROTOCOL â€” Before completing task
+    Note over Agent,Docs: CLOSE PROTOCOL — Before completing task
 
     Agent->>HotZone: UPDATE activeContext.md\nCurrent task, last result, next steps
     Agent->>HotZone: UPDATE progress.md\nCheckbox state
@@ -139,7 +146,7 @@ sequenceDiagram
 
     Agent->>Git: Commit Hot Zone updates\ndocs-memory: session-close
 
-    Note over Agent,Docs: CRASH RECOVERY â€” Background daemon
+    Note over Agent,Docs: CRASH RECOVERY — Background daemon
 
     loop Every 5 minutes during active work
         Arbiter->>HotZone: HEARTBEAT: Write session-checkpoint.md\nSession ID, branch, commit hash, current task
@@ -148,7 +155,7 @@ sequenceDiagram
 
 ---
 
-## Diagram 13 â€” Inter-Agent Handoff Protocol
+## Diagram 13 — Inter-Agent Handoff Protocol
 
 > How agents pass the baton between pipeline stages using `handoff-state.md` as the message bus, with the Orchestrator Agent as the traffic controller.
 
@@ -180,7 +187,7 @@ sequenceDiagram
     alt Normal progression
         Orchestrator->>NextAgent: Activate with context\nhandoff-state.md contents\nstate.json constraints\nRelevant artifacts
         NextAgent->>HandoffFile: READ: Ingest previous agent recommendations
-        NextAgent->>NextAgent: Execute startup protocol CHECK-CREATE-READ-ACT
+        NextAgent->>NextAgent: Execute startup protocol SCAN-CHECK-CREATE-READ-ACT
     else Blocker detected
         Orchestrator->>Arbiter: Report blocker
         alt Blocker requires human
@@ -196,7 +203,7 @@ sequenceDiagram
 
 ---
 
-## Diagram 14 â€” GitFlow and Branch Strategy
+## Diagram 14 — GitFlow and Branch Strategy
 
 > The absolute branching strategy. Every branch type, its lifecycle, merge direction, and forbidden actions.
 
@@ -260,7 +267,7 @@ gitGraph
 
 ---
 
-## Diagram 15 â€” Naming Conventions and File Taxonomy
+## Diagram 15 — Naming Conventions and File Taxonomy
 
 > Every naming pattern used in the system: branches, commits, files, REQ-IDs, and directories.
 
@@ -345,13 +352,13 @@ mindmap
 
 ---
 
-## Diagram 16 â€” Separation of Domains: Engine vs Payload
+## Diagram 16 — Separation of Domains: Engine vs Payload
 
 > The rigid boundary between what the Workbench owns and what the Application owns. Engine files can be overwritten during upgrades; Payload files are never touched.
 
 ```mermaid
 graph TB
-    subgraph ENGINE["ENGINE â€” Owned by the Workbench â€” CAN be overwritten during upgrade"]
+    subgraph ENGINE["ENGINE — Owned by the Workbench — CAN be overwritten during upgrade"]
         direction TB
         E1[.clinerules
 Behavioral constitution
@@ -369,12 +376,13 @@ crash_recovery.py]
 Git hooks
 pre-commit, pre-push, post-tag]
         E5[biome.json
-Root-level linting and formatting]
+Root-level linting and formatting
+Configured for JS/TS projects — see pyproject.toml for Python]
         E6[.workbench-version
 Engine version tracking]
     end
 
-    subgraph PAYLOAD["PAYLOAD â€” Owned by the Application â€” NEVER touched by workbench upgrade"]
+    subgraph PAYLOAD["PAYLOAD — Owned by the Application — NEVER touched by workbench upgrade"]
         direction TB
         P1[src/
 Application source code]
@@ -404,7 +412,7 @@ Source of truth for Engine files"]
         T4[Latest Git hooks]
     end
 
-    subgraph CLI["workbench-cli.py â€” Global install â€” not in app repo"]
+    subgraph CLI["workbench-cli.py — Global install — not in app repo"]
         C1[init command
 Scaffolds new project]
         C2[upgrade command
@@ -429,9 +437,9 @@ Sprint-end memory rotation]
 
 ---
 
-## Diagram 17 â€” workbench-cli.py Init and Upgrade Sequences
+## Diagram 17 — workbench-cli.py Init and Upgrade Sequences
 
-> The deterministic bootstrapper sequences. AI must NOT be used for initialization or upgrades â€” only the Python CLI handles these foundational operations.
+> The deterministic bootstrapper sequences. AI must NOT be used for initialization or upgrades — only the Python CLI handles these foundational operations.
 
 ```mermaid
 sequenceDiagram
@@ -444,7 +452,7 @@ sequenceDiagram
     participant StateJSON as state.json
     participant Git as Git
 
-    Note over Dev,Git: INIT SEQUENCE â€” python workbench-cli.py init my-new-app
+    Note over Dev,Git: INIT SEQUENCE — python workbench-cli.py init my-new-app
 
     Dev->>CLI: python workbench-cli.py init my-new-app
 
@@ -463,7 +471,7 @@ sequenceDiagram
 
     CLI->>Dev: Scaffold complete - Project ready for Phase 0 ideation
 
-    Note over Dev,Git: UPGRADE SEQUENCE â€” python workbench-cli.py upgrade --version v3.0
+    Note over Dev,Git: UPGRADE SEQUENCE — python workbench-cli.py upgrade --version v3.0
 
     Dev->>CLI: python workbench-cli.py upgrade --version v3.0
 
@@ -489,4 +497,3 @@ sequenceDiagram
         Arbiter->>CLI: REFUSED: Active development in progress
         CLI->>Dev: ERROR: Cannot upgrade during active development\nComplete or pause current work first
     end
-```

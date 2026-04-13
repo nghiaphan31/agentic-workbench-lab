@@ -40,7 +40,7 @@ This glossary defines every named entity in the system. All sections of this doc
 
 | Canonical Mode Name | Pipeline Stage | Custom or Built-in | Primary Responsibility |
 | :---- | :---- | :---- | :---- |
-| **Architect Agent** | Stage 1 | Built-in | Translates human narrative into Gherkin `.feature` files. Also called "Product Agent" in conversational contexts — these are synonymous. |
+| **Architect Agent** | Stage 1 | Built-in | Translates human narrative into Gherkin `.feature` files. "Product Agent" is a documented conversational alias — permitted in Glossary entries, but forbidden in running prose. |
 | **Test Engineer Agent** | Stage 2 | Custom (`.roomodes`) | Writes failing test suites (`.spec.ts`) from approved `.feature` files. |
 | **Developer Agent** | Stage 3 | Built-in | Writes feature source code in `/src` to satisfy failing tests. |
 | **Orchestrator Agent** | Stage 4 + Lifecycle | Built-in | Read-only oversight of the review stage and inter-agent handoffs. |
@@ -316,11 +316,18 @@ The `arbiter_capabilities` array in `state.json` is the authoritative record of 
 
 ```json
 {
-  "version": "2.0",
+  "version": "2.1",
   "state": "INIT",
   "stage": null,
   "active_req_id": null,
-  "test_pass_ratio": null,
+  "feature_suite_pass_ratio": null,
+  "full_suite_pass_ratio": null,
+  "regression_state": "NOT_RUN",
+  "regression_failures": [],
+  "integration_state": "NOT_RUN",
+  "integration_test_pass_ratio": null,
+  "feature_registry": {},
+  "file_ownership": {},
   "last_updated": null,
   "last_updated_by": "workbench-cli",
   "arbiter_capabilities": {
@@ -518,7 +525,7 @@ This operational triad consists of (see Glossary in Part 1.5 for canonical defin
 
 ---
 
-## 2\. The Glue: State-Driven File System
+## 8.2 The Glue: State-Driven File System
 
 System synchronization occurs entirely via a **File-System-as-Database** pattern. Agents and scripts do not communicate via direct API calls; they coordinate through immutable state files.
 

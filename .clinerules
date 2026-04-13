@@ -3,7 +3,7 @@
 **Canonical File:** `.clinerules`
 **Alias:** `.cursorrules` (Cursor IDE compatibility alias — both files are identical in behavior)
 **Owner:** The Workbench (Engine Layer)
-**Version:** 2.2
+**Version:** 2.2-root
 
 > **Authority:** This file is the behavioral constitution for all Roo Code agent modes. Every rule here is mandatory and must be enforced by the agent regardless of mode. Violations are not advisory — they are breaches of the workbench contract.
 
@@ -11,17 +11,20 @@
 
 ## 1. Session Lifecycle Protocols
 
-### 1.1 Startup Protocol (CHECK → CREATE → READ → ACT)
+### 1.1 Startup Protocol (SCAN → CHECK → CREATE → READ → ACT)
 
 Before taking any action in a session, the agent MUST execute this sequence **in order**:
 
+0. **SCAN** — Run `python .workbench/scripts/arbiter_check.py check-session`
+   - If any CRITICAL violations: resolve before proceeding
+   - If any WARNING violations: acknowledge and log to `handoff-state.md`
 1. **CHECK** for `activeContext.md` in `memory-bank/hot-context/`
 2. **CREATE** `activeContext.md` from the template if it does not exist
 3. **READ** `activeContext.md` completely
 4. **READ** `progress.md` completely
-5. **ACT** — only after steps 1–4 are confirmed complete
+5. **ACT** — only after steps 0–4 are confirmed complete
 
-> **Rule SLC-1:** The agent MUST NOT perform any cognitive work (writing code, generating tests, etc.) before completing the CHECK→CREATE→READ sequence. The only permitted actions before step 5 are file existence checks and template instantiation.
+> **Rule SLC-1:** The agent MUST NOT perform any cognitive work (writing code, generating tests, etc.) before completing the SCAN→CHECK→CREATE→READ sequence. The only permitted actions before step 5 are the compliance scan, file existence checks, and template instantiation.
 
 ### 1.2 Close Protocol
 
@@ -118,6 +121,8 @@ The agent MUST NOT:
 - Commit changes to `state.json` directly (only the Arbiter writes to `state.json`)
 
 > **Rule CMT-1:** All commits MUST be made on a `feature/` or `lab/` branch. Direct commits to `main` or `develop` are physically blocked by the `pre-commit` and `pre-push` Git hooks.
+>
+> **Exception:** `workbench-cli.py init` and `workbench-cli.py upgrade` are permitted to commit directly to `main` as bootstrapping operations.
 
 ---
 
@@ -228,7 +233,13 @@ The agent MUST read files from `memory-bank/hot-context/` at session start. The 
 
 The agent MUST NOT read files from `memory-bank/archive-cold/` directly. Cold Zone access is granted exclusively through the MCP tool. Archiving is handled by The Arbiter's `memory_rotator.py`.
 
-> **Rule MEM-1:** The agent MUST NOT directly read `memory-bank/archive-cold/` files. Cold Zone files are accessed exclusively through the MCP tool. Direct access floods the context window with stale data.
+> **Rule MEM-1:** The agent MUST NOT directly read `memory-bank/archive-cold/` files.
+> Cold Zone files are accessed exclusively through the `archive-query` MCP tool:
+>   - `search_archive(query)` — find relevant archived files (returns max 3 results with excerpts)
+>   - `read_archive_file(filename, max_lines=100)` — read a specific file (truncated)
+> Direct access floods the context window with stale data.
+>
+> **Exception:** The Documentation/Librarian Agent may read Cold Zone files directly as part of its documentation compilation mandate.
 
 ### 8.3 Decision Logging
 
