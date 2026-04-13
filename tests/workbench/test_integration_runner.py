@@ -63,7 +63,7 @@ class TestIntegrationRunner:
         exit_code, stdout, stderr = run_script("integration_test_runner", "run", "--set-state")
         assert exit_code == 1
         state = read_state(temp_workbench)
-        assert state["integration_state"] == "RED"
+        assert state["integration_state"] == "INTEGRATION_RED"
 
     def test_uc027_feature_green_but_integration_red(self, temp_workbench, state_factory, run_script, mock_runner_fail):
         """UC-027: Feature GREEN but integration fails — state becomes INTEGRATION_RED"""
@@ -75,4 +75,4 @@ class TestIntegrationRunner:
         exit_code, stdout, stderr = run_script("integration_test_runner", "run", "--set-state")
         state = read_state(temp_workbench)
         assert state["state"] == "INTEGRATION_RED"
-        assert state["integration_state"] == "RED"
+        assert state["integration_state"] == "INTEGRATION_RED"

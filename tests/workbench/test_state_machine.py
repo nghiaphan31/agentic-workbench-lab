@@ -4,9 +4,10 @@ Tests for state machine transitions in state.json
 """
 
 import json
+import subprocess
 
 import pytest
-from .helpers import read_state
+from .helpers import TEMPLATE_ROOT, read_state
 
 
 class TestStateMachine:
@@ -106,7 +107,7 @@ class TestStateMachine:
         assert exit_code == 1
         state = read_state(temp_workbench)
         assert state["state"] == "INTEGRATION_RED"
-        assert state["integration_state"] == "RED"
+        assert state["integration_state"] == "INTEGRATION_RED"
 
     def test_sm010_integration_red_to_green(self, temp_workbench, state_factory, run_script, mock_runner_pass):
         """SM-010: INTEGRATION_RED → GREEN — integration tests fixed and re-run"""
@@ -143,12 +144,25 @@ class TestStateMachine:
         state = read_state(temp_workbench)
         assert state["feature_registry"]["REQ-003"]["state"] == "RED"
 
-    def test_sm013_review_pending_to_merged(self, temp_workbench, state_factory, run_script):
+    def test_sm013_review_pending_to_merged(self, temp_workbench, state_factory):
         """SM-013: REVIEW_PENDING → MERGED — HITL Gate 2 approval via CLI"""
-        state_factory(state="REVIEW_PENDING", integration_state="GREEN")
+        state_factory(
+            state="REVIEW_PENDING",
+            integration_state="GREEN",
+            feature_registry={
+                "REQ-001": {"state": "REVIEW_PENDING", "branch": "feature/S1/REQ-001", "depends_on": []}
+            }
+        )
         # Use workbench-cli.py merge command (the proper Arbiter path)
-        exit_code, stdout, stderr = run_script("workbench-cli", "merge", "--req-id", "REQ-001")
+        result = subprocess.run(
+            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "merge", "--req-id", "REQ-001"],
+            cwd=str(temp_workbench),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
         # Exit code 0 means merge command succeeded
+        assert result.returncode == 0, f"merge failed: {result.stderr}"
         state = read_state(temp_workbench)
         assert state["state"] == "MERGED"
         assert state["integration_state"] == "GREEN"

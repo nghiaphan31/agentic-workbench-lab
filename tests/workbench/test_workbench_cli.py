@@ -78,6 +78,11 @@ class TestWorkbenchCLI:
         )
         project_dir = tmp_path / "upgrade-test"
         
+        # Clear any stale checkpoint before upgrade
+        checkpoint_file = project_dir / "memory-bank" / "hot-context" / "session-checkpoint.md"
+        if checkpoint_file.exists():
+            checkpoint_file.unlink()
+        
         result = subprocess.run(
             ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
             cwd=str(project_dir),
@@ -86,6 +91,17 @@ class TestWorkbenchCLI:
             timeout=30,
         )
         assert result.returncode == 0, f"upgrade failed: {result.stderr}"
+        
+        # state.json should be preserved
+        state = json.loads((project_dir / "state.json").read_text(encoding="utf-8"))
+        assert state["state"] == "INIT"
+        
+        # .workbench-version should be updated
+        version_file = project_dir / ".workbench-version"
+        assert version_file.exists()
+        # Version file may contain "v2.2" or just "2.2"
+        version_content = version_file.read_text()
+        assert "2.2" in version_content, f"Expected version '2.2' in '{version_content}'"
         
         # state.json should be preserved
         state = json.loads((project_dir / "state.json").read_text(encoding="utf-8"))
@@ -115,6 +131,15 @@ class TestWorkbenchCLI:
         with open(project_dir / "state.json", "w") as f:
             json.dump(state, f, indent=2)
             f.write("\n")
+        
+        # Configure git user (required for commit in upgrade)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(project_dir), capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], cwd=str(project_dir), capture_output=True)
+        
+        # Clear any stale checkpoint before upgrade
+        checkpoint_file = project_dir / "memory-bank" / "hot-context" / "session-checkpoint.md"
+        if checkpoint_file.exists():
+            checkpoint_file.unlink()
         
         result = subprocess.run(
             ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
