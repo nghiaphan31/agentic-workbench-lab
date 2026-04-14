@@ -123,7 +123,7 @@ journey
 
 ---
 
-## Diagram 20 — Full System Topology: All Components
+## Diagram 20 — Full System Topology: All Components (from 01-system-overview.md)
 
 > The complete bird's-eye view of every component, file, script, agent, and human touchpoint in the Agentic Workbench v2.0 system.
 

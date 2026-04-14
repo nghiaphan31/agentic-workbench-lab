@@ -63,7 +63,7 @@ These are deterministic programs owned by **The Arbiter**. Each script has exact
 | **`dependency_monitor.py`** | "dep_monitor.py", "Dependency Checker" | Polls `feature_registry`; auto-unblocks `DEPENDENCY_BLOCKED` features |
 | **`gherkin_validator.py`** | "gherkin_lint.py", "Feature Validator" | Validates Gherkin syntax; parses `@depends-on` tags |
 | **`memory_rotator.py`** | "rotation.py", "Memory Rotator script" | Applies per-file rotation policy at sprint end |
-| **`audit_logger.py`** | "logger.py", "Audit Trail" | Saves immutable session metadata to `docs/conversations/` |
+| **`audit_logger.py`** | "logger.py", "Audit Trail" | Saves immutable session metadata to `docs/conversations/`; subcommands: `save` |
 | **`crash_recovery.py`** | "heartbeat.py", "Recovery Daemon" | Writes 5-minute heartbeat to `session-checkpoint.md` |
 | **`arbiter_check.py`** | "compliance_check.py", "Health Check" | Runs session startup compliance scan; checks for violations of `.clinerules` rules |
 | **`compliance_snapshot.py`** | "snapshot.py", "Compliance Report" | Generates compliance documentation (PDFs + Traceability Matrix) on tag events |

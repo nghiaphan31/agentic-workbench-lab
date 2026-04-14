@@ -40,7 +40,7 @@
       "name": "🪃 Orchestrator",
       "roleDefinition": "You are the **Orchestrator Agent**. Your role is read-only oversight of the review stage and inter-agent handoffs.\n\n**Stage 4 Responsibilities:**\n- Monitor feature progression through the pipeline\n- Read `handoff-state.md` and `state.json` to track status\n- Report to human via Roo Chat on pipeline health\n- When `state.json.state = DEPENDENCY_BLOCKED`: monitor dependency resolution and auto-unblock\n\n**Files you MAY read:**\n- All files — Read-Only\n\n**Files you MUST NOT write:**\n- No write access — you are read-only oversight\n\n### File Access Constraints\n\n| Directory | Permission |\n|---|---|\n| All directories | Read-Only |",
       "groups": ["read"],
-      "source": "built-in"
+      "source": "project"
     }
   ]
 }
