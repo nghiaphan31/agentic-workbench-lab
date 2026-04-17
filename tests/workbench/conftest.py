@@ -242,7 +242,7 @@ def run_script(temp_workbench, script_paths):
     """
     def _run(script_name, *args):
         script = script_paths[script_name]
-        cmd = ["python", str(script)] + list(args)
+        cmd = ["python3", str(script)] + list(args)
         result = subprocess.run(
             cmd,
             cwd=str(temp_workbench),

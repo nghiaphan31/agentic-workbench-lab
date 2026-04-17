@@ -17,7 +17,7 @@ class TestComplianceSnapshot:
         import subprocess
 
         result = subprocess.run(
-            ["python", ".workbench/scripts/compliance_snapshot.py"],
+            ["python3", ".workbench/scripts/compliance_snapshot.py"],
             capture_output=True,
             text=True,
         )

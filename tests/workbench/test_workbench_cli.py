@@ -19,7 +19,7 @@ class TestWorkbenchCLI:
         """UC-041: init — creates full scaffold with state.json=INIT"""
         # Change to tmp_path for init
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "test-project"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "test-project"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -57,7 +57,7 @@ class TestWorkbenchCLI:
         project_dir.mkdir()
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "test-project"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "test-project"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -70,7 +70,7 @@ class TestWorkbenchCLI:
         """UC-043: upgrade — safe state INIT — proceeds"""
         # Create a project
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "upgrade-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "upgrade-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -84,7 +84,7 @@ class TestWorkbenchCLI:
             checkpoint_file.unlink()
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -117,7 +117,7 @@ class TestWorkbenchCLI:
     def test_uc044_upgrade_safe_state_merged(self, tmp_path):
         """UC-044: upgrade — safe state MERGED — proceeds"""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "merged-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "merged-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -142,7 +142,7 @@ class TestWorkbenchCLI:
             checkpoint_file.unlink()
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -153,7 +153,7 @@ class TestWorkbenchCLI:
     def test_uc045_upgrade_unsafe_state_red(self, tmp_path):
         """UC-045: upgrade — unsafe state RED — blocked"""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "red-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "red-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -169,7 +169,7 @@ class TestWorkbenchCLI:
             f.write("\n")
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -181,7 +181,7 @@ class TestWorkbenchCLI:
     def test_uc046_upgrade_unsafe_state_regression_red(self, tmp_path):
         """UC-046: upgrade — unsafe state REGRESSION_RED — blocked"""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "reg-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "reg-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -196,7 +196,7 @@ class TestWorkbenchCLI:
             f.write("\n")
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "upgrade", "--version", "v2.2"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -207,7 +207,7 @@ class TestWorkbenchCLI:
     def test_uc047_status_displays_all_fields(self, tmp_path):
         """UC-047: status — displays all state.json fields"""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "status-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "status-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -216,7 +216,7 @@ class TestWorkbenchCLI:
         project_dir = tmp_path / "status-test"
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "status"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "status"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -230,7 +230,7 @@ class TestWorkbenchCLI:
     def test_uc048_status_no_state_json(self, tmp_path):
         """UC-048: status — no state.json — exit 1"""
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "status"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "status"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -242,7 +242,7 @@ class TestWorkbenchCLI:
     def test_uc049_rotate_delegates_to_memory_rotator(self, tmp_path):
         """UC-049: rotate — delegates to memory_rotator.py"""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "rotate-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "rotate-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -251,7 +251,7 @@ class TestWorkbenchCLI:
         project_dir = tmp_path / "rotate-test"
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "rotate"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "rotate"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -264,7 +264,7 @@ class TestWorkbenchCLI:
     def test_uc050_rotate_memory_rotator_not_found(self, tmp_path):
         """UC-050: rotate — memory_rotator.py missing — exit 1"""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "norotator-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "norotator-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -277,7 +277,7 @@ class TestWorkbenchCLI:
         rotator.unlink()
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "rotate"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "rotate"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -337,7 +337,7 @@ class TestHookInstallation:
         import stat
         import sys
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "hook-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "hook-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -370,7 +370,7 @@ class TestMergeCommand:
         """GAP-5d: merge command transitions state from REVIEW_PENDING to MERGED."""
         # Create project via init
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "merge-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "merge-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -393,7 +393,7 @@ class TestMergeCommand:
         
         # Run merge command
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "merge", "--req-id", "REQ-001"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "merge", "--req-id", "REQ-001"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -412,7 +412,7 @@ class TestMergeCommand:
     def test_gap5d_merge_fails_when_not_review_pending(self, tmp_path):
         """GAP-5d: merge command fails when state != REVIEW_PENDING."""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "merge-fail-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "merge-fail-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -429,7 +429,7 @@ class TestMergeCommand:
             f.write("\n")
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "merge", "--req-id", "REQ-001"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "merge", "--req-id", "REQ-001"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -450,7 +450,7 @@ class TestFullLifecycle:
         """GAP-6f: start-feature → lock-requirements → set-red lifecycle."""
         # Create project via init
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "lifecycle-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "lifecycle-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -471,7 +471,7 @@ Feature: User Authentication
         
         # Step 1: start-feature
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "start-feature", "--req-id", "REQ-001", "--slug", "user-auth"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "start-feature", "--req-id", "REQ-001", "--slug", "user-auth"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -485,7 +485,7 @@ Feature: User Authentication
         
         # Step 2: lock-requirements
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "lock-requirements", "--req-id", "REQ-001"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "lock-requirements", "--req-id", "REQ-001"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -498,7 +498,7 @@ Feature: User Authentication
         
         # Step 3: set-red
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "set-red", "--req-id", "REQ-001"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "set-red", "--req-id", "REQ-001"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -513,7 +513,7 @@ Feature: User Authentication
     def test_gap6f_review_pending_requires_integration_green(self, tmp_path):
         """GAP-6f: review-pending fails when integration_state != GREEN (enforces INT-1)."""
         subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "review-test"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "init", "review-test"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -533,7 +533,7 @@ Feature: User Authentication
             f.write("\n")
         
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "review-pending", "--req-id", "REQ-001"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "review-pending", "--req-id", "REQ-001"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,

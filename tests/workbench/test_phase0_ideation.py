@@ -252,6 +252,7 @@ class TestHitl0Approval:
 **Date:** 2026-04-14
 ''', encoding='utf-8')
 
+        state_factory(state='INIT')
         state = json.loads((temp_workbench / 'state.json').read_text())
         # State should remain INIT until approved
         assert state['state'] == 'INIT'

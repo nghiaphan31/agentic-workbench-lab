@@ -29,7 +29,7 @@ class TestUpgradeSafeStates:
         
         # Create a workbench project
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-upgrade'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-upgrade'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -57,7 +57,7 @@ class TestUpgradeSafeStates:
         
         # Run upgrade
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -72,7 +72,7 @@ class TestUpgradeSafeStates:
         # See Draft.md line 576
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-merged'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-merged'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -100,7 +100,7 @@ class TestUpgradeSafeStates:
         
         # Run upgrade
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -120,7 +120,7 @@ class TestUpgradeUnsafeStates:
         # See Draft.md line 582: "Arbiter refuses upgrade if state != INIT or MERGED"
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-stage1'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-stage1'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -140,7 +140,7 @@ class TestUpgradeUnsafeStates:
         
         # Run upgrade
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -155,7 +155,7 @@ class TestUpgradeUnsafeStates:
         # See Draft.md line 582
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-red'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-red'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -173,7 +173,7 @@ class TestUpgradeUnsafeStates:
         (project_dir / 'state.json').write_text(json.dumps(state, indent=2) + '\n')
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -186,7 +186,7 @@ class TestUpgradeUnsafeStates:
         # UPG-005: REGRESSION_RED → upgrade blocked
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-reg-red'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-reg-red'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -204,7 +204,7 @@ class TestUpgradeUnsafeStates:
         (project_dir / 'state.json').write_text(json.dumps(state, indent=2) + '\n')
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -217,7 +217,7 @@ class TestUpgradeUnsafeStates:
         # UPG-006: PIVOT_IN_PROGRESS → upgrade blocked
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-pivot'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-pivot'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -234,7 +234,7 @@ class TestUpgradeUnsafeStates:
         (project_dir / 'state.json').write_text(json.dumps(state, indent=2) + '\n')
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -247,7 +247,7 @@ class TestUpgradeUnsafeStates:
         # UPG-007: DEPENDENCY_BLOCKED → upgrade blocked
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-dep-block'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-dep-block'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -269,7 +269,7 @@ class TestUpgradeUnsafeStates:
         (project_dir / 'state.json').write_text(json.dumps(state, indent=2) + '\n')
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -289,7 +289,7 @@ class TestUpgradeEffects:
         # See Draft.md lines 680-682
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-engine'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-engine'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -311,7 +311,7 @@ class TestUpgradeEffects:
         
         # Run upgrade
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -331,7 +331,7 @@ class TestUpgradeEffects:
         # See Draft.md line 683: "It does not delete existing memory files"
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-memory'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-memory'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -359,7 +359,7 @@ class TestUpgradeEffects:
         
         # Run upgrade
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -377,7 +377,7 @@ class TestUpgradeEffects:
         # See Draft.md line 684
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-version'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-version'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -401,7 +401,7 @@ class TestUpgradeEffects:
         
         # Run upgrade
         subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -425,7 +425,7 @@ class TestUpgradeCommit:
         # See Draft.md line 685
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-commit'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-commit'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -449,7 +449,7 @@ class TestUpgradeCommit:
         
         # Run upgrade
         subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -478,7 +478,7 @@ class TestUpgradeSafety:
         # See Beginners_Guide.md Step 2.2
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-checkpoint'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-checkpoint'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -496,7 +496,7 @@ class TestUpgradeSafety:
         
         # Try upgrade
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
@@ -511,7 +511,7 @@ class TestUpgradeSafety:
         # See Draft.md line 681
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-tests'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'init', 'test-tests'],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -527,7 +527,7 @@ class TestUpgradeSafety:
         (project_dir / 'state.json').write_text(json.dumps(state, indent=2) + '\n')
         
         result = subprocess.run(
-            ['python', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
+            ['python3', str(Path(__file__).parent.parent.parent / 'agentic-workbench-engine' / 'workbench-cli.py'), 'upgrade', '--version', 'v2.2'],
             cwd=str(project_dir),
             capture_output=True,
             text=True,

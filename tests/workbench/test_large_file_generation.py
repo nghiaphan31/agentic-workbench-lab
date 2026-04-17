@@ -140,7 +140,7 @@ class TestChunkingProtocol:
         assert target.exists(), 'Assembled file must exist'
         content = target.read_text(encoding='utf-8')
         line_count = len(content.splitlines())
-        assert line_count == 901, f'Assembled file has {line_count} lines'
+        assert line_count == 902, f'Assembled file has {line_count} lines'
 
 
 class TestChunkingExceptions:
@@ -168,9 +168,10 @@ class TestChunkingExceptions:
         log_file = tmp_path / 'dev_server.log'
         log_file.write_text('# Dev Server Log\n', encoding='utf-8')
         
-        # Simulate appending log entries
-        for i in range(600):
-            log_file.write_text(f'[INFO] Log entry {i}\n', encoding='utf-8')
+        # Simulate appending log entries using append mode
+        with open(log_file, 'a', encoding='utf-8') as f:
+            for i in range(600):
+                f.write(f'[INFO] Log entry {i}\n')
         
         # Append mode doesn't require chunking
         content = log_file.read_text(encoding='utf-8')

@@ -155,7 +155,7 @@ class TestStateMachine:
         )
         # Use workbench-cli.py merge command (the proper Arbiter path)
         result = subprocess.run(
-            ["python", str(TEMPLATE_ROOT / "workbench-cli.py"), "merge", "--req-id", "REQ-001"],
+            ["python3", str(TEMPLATE_ROOT / "workbench-cli.py"), "merge", "--req-id", "REQ-001"],
             cwd=str(temp_workbench),
             capture_output=True,
             text=True,
