@@ -1,4 +1,4 @@
-﻿# Agentic Workbench v2 â€” Beginner's Guide
+﻿# Agentic Workbench v2 — Beginner's Guide
 
 **Last updated:** 2026-04-17  
 **Architecture:** Ubuntu Server (main dev host) + Windows PC (thin interface via Remote SSH)
@@ -43,21 +43,21 @@ The Agentic Workbench is designed for a **two-machine setup**:
 
 ```
 AGENTIC_DEVELOPMENT_PROJECTS/
-â”œâ”€â”€ agentic-workbench-engine/    # Canonical engine (cloned from GitHub)
-â”œâ”€â”€ agentic-workbench-lab/        # This repo (workbench development)
-â”œâ”€â”€ APPLICATION-PROJECTS/         # Your application projects
-â”‚   â”œâ”€â”€ my-app-1/
-â”‚   â””â”€â”€ my-app-2/
-â””â”€â”€ archive/                      # Archived projects
+├── agentic-workbench-engine/    # Canonical engine (cloned from GitHub)
+├── agentic-workbench-lab/        # This repo (workbench development)
+├── APPLICATION-PROJECTS/         # Your application projects
+│   ├── my-app-1/
+│   └── my-app-2/
+└── archive/                      # Archived projects
 ```
 
 ### How Machines Connect
 
 ```
-Windows PC  â†â†’  Tailscale VPN  â†â†’  Ubuntu Server (24/7)
-     â†“                              â†“
+Windows PC  ←→  Tailscale VPN  ←→  Ubuntu Server (24/7)
+     ↓                              ↓
 VS Code Remote SSH            VS Code Server
-     â†“                              â†“
+     ↓                              ↓
    (Display only)            (All development work)
 ```
 
@@ -236,10 +236,10 @@ ls -la AGENTIC_DEVELOPMENT_PROJECTS/
 Expected output:
 ```
 AGENTIC_DEVELOPMENT_PROJECTS/
-â”œâ”€â”€ agentic-workbench-engine/
-â”œâ”€â”€ agentic-workbench-lab/
-â”œâ”€â”€ APPLICATION-PROJECTS/
-â””â”€â”€ archive/
+├── agentic-workbench-engine/
+├── agentic-workbench-lab/
+├── APPLICATION-PROJECTS/
+└── archive/
 ```
 
 ### Step 2.8: Sync dotfiles on Ubuntu
@@ -322,25 +322,25 @@ python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py 
 1. **Directory scaffold created:**
    ```
    my-first-app/
-   â”œâ”€â”€ .workbench/
-   â”‚   â”œâ”€â”€ hooks/          # Git hooks (pre-commit, pre-push)
-   â”‚   â””â”€â”€ scripts/        # Arbiter Python scripts
-   â”œâ”€â”€ docs/
-   â”‚   â””â”€â”€ conversations/  # Audit trail
-   â”œâ”€â”€ features/           # Gherkin feature files
-   â”œâ”€â”€ memory-bank/
-   â”‚   â”œâ”€â”€ archive-cold/   # Rotated memory
-   â”‚   â””â”€â”€ hot-context/    # Active memory
-   â”œâ”€â”€ src/                # Your application code
-   â”œâ”€â”€ tests/
-   â”‚   â”œâ”€â”€ integration/
-   â”‚   â””â”€â”€ unit/
-   â”œâ”€â”€ _inbox/             # Draft feature ideas
-   â”œâ”€â”€ .clinerules         # System guardrails
-   â”œâ”€â”€ .roomodes           # Custom agent modes
-   â”œâ”€â”€ .roo-settings.json  # Roo Code settings
-   â”œâ”€â”€ .workbench-version  # Version file
-   â””â”€â”€ state.json          # Master state
+   ├── .workbench/
+   │   ├── hooks/          # Git hooks (pre-commit, pre-push)
+   │   └── scripts/        # Arbiter Python scripts
+   ├── docs/
+   │   └── conversations/  # Audit trail
+   ├── features/           # Gherkin feature files
+   ├── memory-bank/
+   │   ├── archive-cold/   # Rotated memory
+   │   └── hot-context/    # Active memory
+   ├── src/                # Your application code
+   ├── tests/
+   │   ├── integration/
+   │   └── unit/
+   ├── _inbox/             # Draft feature ideas
+   ├── .clinerules         # System guardrails
+   ├── .roomodes           # Custom agent modes
+   ├── .roo-settings.json  # Roo Code settings
+   ├── .workbench-version  # Version file
+   └── state.json          # Master state
    ```
 
 2. **State initialized:**
@@ -395,12 +395,12 @@ VS Code opens the project. You should see the workbench structure in the Explore
 2. **Inject your intent:**
    > "I want a simple greeting feature that says 'Hello, [name]!' when given a name"
 
-3. **Architect Agent activates** â€” Asks clarifying questions (Socratic phase)
-4. **Gherkin files created** in `/features/` â€” Feature specifications written
-5. **Human approval (HITL 1)** â€” You review and approve the `.feature` files
-6. **Test Engineer activates** â€” Writes failing tests for your feature
-7. **Developer activates** â€” Writes code to make tests pass
-8. **Review and merge** â€” Human reviews PR, approves merge
+3. **Architect Agent activates** — Asks clarifying questions (Socratic phase)
+4. **Gherkin files created** in `/features/` — Feature specifications written
+5. **Human approval (HITL 1)** — You review and approve the `.feature` files
+6. **Test Engineer activates** — Writes failing tests for your feature
+7. **Developer activates** — Writes code to make tests pass
+8. **Review and merge** — Human reviews PR, approves merge
 
 **Tip:** Start with a small, simple feature. Don't try to build a complex system on your first attempt.
 
@@ -411,19 +411,19 @@ VS Code opens the project. You should see the workbench structure in the Explore
 ### How Config Sync Works
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                     CONFIG-DOTFILES REPO                          â”‚
-â”‚  (GitHub: nghiaphan31/dotfiles)                                  â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚  .config/VS Code/settings.json  â†â”€â”€â†’  ~/.config/Code/User/       â”‚
-â”‚  .config/VS Code/keybindings.json â†â”€â”€â†’  (symlink)               â”‚
-â”‚  .roo-settings.json  â†â”€â”€â†’  ~/.roo-settings.json                  â”‚
-â”‚  .gitconfig  â†â”€â”€â†’  ~/.gitconfig                                  â”‚
-â”‚  .ssh/config  â†â”€â”€â†’  ~/.ssh/config                                â”‚
-â”‚  .bashrc  â†â”€â”€â†’  ~/.bashrc                                        â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-          â†‘                    â†‘                    â†‘
-     Ubuntu Server        Windows PC          Another PC
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                     CONFIG-DOTFILES REPO                          │
+│  (GitHub: nghiaphan31/dotfiles)                                  │
+├───────────────────────────────────────────────────────────────────────────────────┤
+│  .config/VS Code/settings.json  ←──→  ~/.config/Code/User/       │
+│  .config/VS Code/keybindings.json ←──→  (symlink)               │
+│  .roo-settings.json  ←──→  ~/.roo-settings.json                  │
+│  .gitconfig  ←──→  ~/.gitconfig                                  │
+│  .ssh/config  ←──→  ~/.ssh/config                                │
+│  .bashrc  ←──→  ~/.bashrc                                        │
+└─────────────────────────────────────────────────────────────────────────────────┘
+           ↑                    ↑                    ↑
+      Ubuntu Server        Windows PC          Another PC
 ```
 
 ### Updating Configs on Any Machine
@@ -515,7 +515,7 @@ cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git push
 ```bash
 # 1. Go to https://github.com/nghiaphan31/my-app
 
-# 2. Click "Code" â†’ "Create codespace on main"
+# 2. Click "Code" → "Create codespace on main"
 # This launches a full VS Code in your browser!
 
 # 3. Work normally - it's a full Ubuntu environment
@@ -571,10 +571,10 @@ git push  # Sync back if you worked locally
 
 ### Recommended Backup Practices
 
-1. **Always `git push` when done** â€” GitHub is the backup
-2. **Commit early and often** â€” Don't have large uncommitted changes
-3. **Keep dotfiles repo in sync** â€” Your configs are as important as your code
-4. **Test restore occasionally** â€” Verify you can clone and setup on a fresh machine
+1. **Always `git push` when done** — GitHub is the backup
+2. **Commit early and often** — Don't have large uncommitted changes
+3. **Keep dotfiles repo in sync** — Your configs are as important as your code
+4. **Test restore occasionally** — Verify you can clone and setup on a fresh machine
 ---
 
 ## Part 6: Continuing Development
@@ -583,16 +583,16 @@ git push  # Sync back if you worked locally
 
 **Every session, in order:**
 
-1. **SCAN â†’ CHECK â†’ CREATE â†’ READ â†’ ACT**
+1. **SCAN → CHECK → CREATE → READ → ACT**
    - Run: `python .workbench/scripts/arbiter_check.py check-session`
    - Check for `activeContext.md`
    - Read `activeContext.md` and `progress.md`
    - Then start cognitive work
 
 2. **Start work**
-   - Open `state.json` â€” know the current state
-   - Open `activeContext.md` â€” know what's in progress
-   - Open `progress.md` â€” know the project checklist
+   - Open `state.json` — know the current state
+   - Open `activeContext.md` — know what's in progress
+   - Open `progress.md` — know the project checklist
 
 3. **Do work** with Roo Code agents
 
@@ -611,9 +611,9 @@ cat state.json
 ```
 
 Key fields:
-- `state` â€” Current pipeline state (INIT, STAGE_1_ACTIVE, GREEN, etc.)
-- `active_req_id` â€” Which feature is currently active
-- `feature_registry` â€” All features and their states
+- `state` — Current pipeline state (INIT, STAGE_1_ACTIVE, GREEN, etc.)
+- `active_req_id` — Which feature is currently active
+- `feature_registry` — All features and their states
 
 **activeContext.md:**
 ```bash
@@ -660,11 +660,11 @@ Refs: REQ-042"
 ```
 
 **Commit types:**
-- `feat(REQ-NNN)` â€” New feature
-- `fix(REQ-NNN)` â€” Bug fix
-- `test(REQ-NNN)` â€” Test changes
-- `docs` â€” Documentation
-- `chore` â€” Maintenance (workbench updates)
+- `feat(REQ-NNN)` — New feature
+- `fix(REQ-NNN)` — Bug fix
+- `test(REQ-NNN)` — Test changes
+- `docs` — Documentation
+- `chore` — Maintenance (workbench updates)
 
 ### Syncing Across Machines
 
@@ -694,12 +694,12 @@ The workbench can only be upgraded when the project is in a **safe state**:
 
 | State | Upgrade Allowed? |
 |-------|------------------|
-| `INIT` | âœ… Yes |
-| `MERGED` | âœ… Yes |
-| `STAGE_1_ACTIVE` | âŒ No â€” active development |
-| `RED` | âŒ No â€” tests failing |
-| `FEATURE_GREEN` | âŒ No â€” not fully validated |
-| `REGRESSION_RED` | âŒ No â€” regression in progress |
+| `INIT` | ✅ Yes |
+| `MERGED` | ✅ Yes |
+| `STAGE_1_ACTIVE` | ❌ No — active development |
+| `RED` | ❌ No — tests failing |
+| `FEATURE_GREEN` | ❌ No — not fully validated |
+| `REGRESSION_RED` | ❌ No — regression in progress |
 
 ### Step 7.1: Check Current State
 
@@ -747,16 +747,16 @@ python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py 
 ```
 
 **What the upgrade does:**
-1. **Safety check** â€” Confirms state is INIT or MERGED
-2. **Engine overwrite** â€” Replaces:
+1. **Safety check** — Confirms state is INIT or MERGED
+2. **Engine overwrite** — Replaces:
    - `.clinerules`
    - `.roomodes`
    - `.workbench/scripts/` (Arbiter scripts)
    - `.workbench/hooks/` (Git hooks)
    - `.roo-settings.json`
-3. **Memory migration** â€” Creates new memory files if needed; existing memory preserved
-4. **Version bump** â€” Updates `.workbench-version`
-5. **Auto-commit** â€” `chore(workbench): upgrade engine to v2.2`
+3. **Memory migration** — Creates new memory files if needed; existing memory preserved
+4. **Version bump** — Updates `.workbench-version`
+5. **Auto-commit** — `chore(workbench): upgrade engine to v2.2`
 
 ### Step 7.5: Verify Upgrade
 
@@ -802,7 +802,7 @@ You develop the workbench when you want to:
 
 ### Where Development Happens
 
-**`agentic-workbench-lab/`** â€” This repo
+**`agentic-workbench-lab/`** — This repo
 
 This is where workbench improvements are developed and tested. The engine at `agentic-workbench-engine/` is the canonical template.
 
@@ -910,7 +910,7 @@ The CLI is not in PATH. Either:
 1. Use full path: `python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py`
 2. Or add to PATH in `.bashrc`: `export PATH="$PATH:$HOME/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine"`
 
-### "Error: state is not INIT or MERGED â€” upgrade blocked"
+### "Error: state is not INIT or MERGED — upgrade blocked"
 
 The project is in an active state. Either:
 1. Wait for current work to complete
@@ -937,9 +937,9 @@ git config --global user.email "you@example.com"
 ### Roo Code isn't responding to .clinerules
 
 1. Ensure `.clinerules` is in the **project root** (not a subdirectory)
-2. Ensure you've opened the folder in VS Code (File â†’ Open Folder)
+2. Ensure you've opened the folder in VS Code (File → Open Folder)
 3. Ensure Roo Code extension is installed and active
-4. Try re-importing settings: `Roo Code: Import Settings` â†’ select `.roo-settings.json`
+4. Try re-importing settings: `Roo Code: Import Settings` → select `.roo-settings.json`
 
 ### SSH connection to Ubuntu fails
 
@@ -964,7 +964,7 @@ ln -s ~/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
 
 1. Check if Ubuntu is reachable: `ping <ubuntu-ip>`
 2. Check if SSH service is running: `sudo systemctl status ssh`
-3. Try reconnecting: `Ctrl+Shift+P` â†’ "Remote-SSH: Connect to Host"
+3. Try reconnecting: `Ctrl+Shift+P` → "Remote-SSH: Connect to Host"
 
 ### Git push rejected
 
@@ -1069,66 +1069,65 @@ git diff HEAD
 ### State Overview
 
 ```
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚                      INIT (Fresh Start)                       â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                                    â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚                   STAGE_1_ACTIVE (Architect)                   â”‚
-        â”‚              Writing feature files (.feature)                  â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                                    â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚                  REQUIREMENTS_LOCKED                          â”‚
-        â”‚              Feature files approved, waiting for tests        â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                                    â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚                         RED                                  â”‚
-        â”‚              Tests written but failing (expected)            â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                                    â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚                     FEATURE_GREEN                             â”‚
-        â”‚           Current feature's tests pass (Phase 1)            â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                                    â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚               REGRESSION_RED (Something broke)                â”‚
-        â”‚              Full test suite reveals regression              â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                                    â–¼ (if fixed)
-                                    â”‚
-                                    â–¼ (if clean)
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚                         GREEN                                 â”‚
-        â”‚      Phase 1 + Phase 2 (full regression) both pass          â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                                    â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚                    INTEGRATION_CHECK                          â”‚
-        â”‚                 Running integration tests                     â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-                         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-                         â–¼                      â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚      INTEGRATION_RED      â”‚  â”‚      REVIEW_PENDING       â”‚
-        â”‚  Integration tests fail   â”‚  â”‚   Awaiting human review   â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                         â”‚                      â”‚
-                         â–¼                      â–¼
-        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-        â”‚        GREEN             â”‚  â”‚         MERGED            â”‚
-        â”‚ (after fixing)           â”‚  â”‚    Feature complete!      â”‚
-        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │                      INIT (Fresh Start)                       │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │                   STAGE_1_ACTIVE (Architect)                   │
+        │              Writing feature files (.feature)                  │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │                  REQUIREMENTS_LOCKED                          │
+        │              Feature files approved, waiting for tests        │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │                         RED                                  │
+        │              Tests written but failing (expected)            │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │                     FEATURE_GREEN                             │
+        │           Current feature's tests pass (Phase 1)            │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │               REGRESSION_RED (Something broke)                │
+        │              Full test suite reveals regression              │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ (if fixed)
+                                    │
+                                    ▼ (if clean)
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │                         GREEN                                 │
+        │      Phase 1 + Phase 2 (full regression) both pass          │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+        ┌─────────────────────────────────────────────────────────────────────────────────┐
+        │                    INTEGRATION_CHECK                          │
+        │                 Running integration tests                     │
+        └─────────────────────────────────────────────────────────────────────────────────┘
+                          ┌─────────────────────────────────┐
+                          ▼                                 ▼
+        ┌──────────────────────────┐  ┌─────────────────────────────────┐
+        │      INTEGRATION_RED      │  │         REVIEW_PENDING          │
+        │  Integration tests fail   │  │   Awaiting human review         │
+        └──────────────────────────┘  └─────────────────────────────────┘
+                          │                                 │
+                          ▼                                 ▼
+        ┌──────────────────────────┐  ┌─────────────────────────────────┐
+        │        GREEN              │  │           MERGED                │
+        │ (after fixing)            │  │    Feature complete!            │
+        └──────────────────────────┘  └─────────────────────────────────┘
 ```
 
 ### State Definitions
@@ -1164,8 +1163,8 @@ git diff HEAD
 
 ## Getting Help
 
-1. **Read the spec:** `Agentic Workbench v2 - Draft.md` â€” comprehensive architectural documentation
-2. **Check decision log:** `memory-bank/hot-context/decisionLog.md` â€” architectural decisions
+1. **Read the spec:** `Agentic Workbench v2 - Draft.md` — comprehensive architectural documentation
+2. **Check decision log:** `memory-bank/hot-context/decisionLog.md` — architectural decisions
 3. **Ask Roo Code:** Use Roo Chat to ask questions about the workbench
 4. **Review the engine:** Browse `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine`
 5. **Review tests:** Browse `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/tests/workbench`
