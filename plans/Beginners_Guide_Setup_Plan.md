@@ -30,80 +30,44 @@ The user has a working two-machine setup with Tailscale VPN and SSH keys configu
 
 ### A.2 What is MISSING or DIFFERENT
 
-| # | Gap | Beginners Guide Says | Current State | Severity |
-|---|-----|---------------------|---------------|----------|
-| 1 | **Folder Structure Architecture** | Engine cloned as **standalone** repo at `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/` | Engine is **git SUBMODULE** inside `agentic-workbench-lab/` → `agentic-workbench-lab/agentic-workbench-engine/` | 🔴 Critical |
-| 2 | **CONFIG-DOTFILES Repo** | Must create `~/CONFIG-DOTFILES/` GitHub repo | **Does NOT exist** | 🔴 Critical |
-| 3 | **APPLICATION-PROJECTS Folder** | Named `APPLICATION-PROJECTS/` | Named `projects/` (exists but wrong name) | 🟡 Moderate |
-| 4 | **VS Code Settings Symlinks** | `~/.config/Code/User/settings.json` → dotfiles | **Not configured** | 🟡 Moderate |
-| 5 | **VS Code Keybindings Symlinks** | `~/.config/Code/User/keybindings.json` → dotfiles | **Not configured** | 🟡 Moderate |
-| 6 | **Roo Code Settings Symlink** | `~/.roo-settings.json` → dotfiles | **Not configured** | 🟡 Moderate |
-| 7 | **Git Config Symlink** | `~/.gitconfig` → dotfiles | **Not configured** | 🟡 Moderate |
-| 8 | **SSH Config for calypso** | `~/.ssh/config` with calypso host entry | **Not configured** | 🟡 Moderate |
-| 9 | **Bash Profile Symlink** | `~/.bashrc` → dotfiles | **Not configured** | 🟡 Moderate |
-| 10 | **VS Code Remote SSH** | Must connect from Windows to Ubuntu | **Not verified** | 🟡 Moderate |
-| 11 | **Roo Code Extension** | Must be installed on VS Code Server | **Not verified** | 🟡 Moderate |
-| 12 | **workbench-cli.py** | Should respond to `--version` | **Not verified** | 🟡 Moderate |
+| # | Gap | Expected State | Current State | Severity |
+|---|-----|----------------|---------------|----------|
+| 1 | **CONFIG-DOTFILES Repo** | Must create `~/CONFIG-DOTFILES/` GitHub repo | **Does NOT exist** | 🔴 Critical |
+| 2 | **APPLICATION-PROJECTS Folder** | Named `APPLICATION-PROJECTS/` | Named `projects/` (exists but wrong name) | 🟡 Moderate |
+| 3 | **VS Code Settings Symlinks** | `~/.config/Code/User/settings.json` → dotfiles | **Not configured** | 🟡 Moderate |
+| 4 | **VS Code Keybindings Symlinks** | `~/.config/Code/User/keybindings.json` → dotfiles | **Not configured** | 🟡 Moderate |
+| 5 | **Roo Code Settings Symlink** | `~/.roo-settings.json` → dotfiles | **Not configured** | 🟡 Moderate |
+| 6 | **Git Config Symlink** | `~/.gitconfig` → dotfiles | **Not configured** | 🟡 Moderate |
+| 7 | **SSH Config for calypso** | `~/.ssh/config` with calypso host entry | **Not configured** | 🟡 Moderate |
+| 8 | **Bash Profile Symlink** | `~/.bashrc` → dotfiles | **Not configured** | 🟡 Moderate |
+| 9 | **VS Code Remote SSH** | Must connect from Windows to Ubuntu | **Not verified** | 🟡 Moderate |
+| 10 | **Roo Code Extension** | Must be installed on VS Code Server | **Not verified** | 🟡 Moderate |
+| 11 | **workbench-cli.py** | Should respond to `--version` | **Not verified** | 🟡 Moderate |
 
 ---
 
-## Part B: Critical Decision Required
+## Part B: Architecture — SUBMODULE PATTERN CONFIRMED
 
-### B.1 Folder Structure Architecture — TWO OPTIONS
+### B.1 Current Folder Structure
 
-The **most significant gap** is the folder structure. The Beginners Guide assumes a **standalone clone** of `agentic-workbench-engine/`, but the current setup uses a **git submodule** pattern.
+The engine is configured as a **git submodule** inside `agentic-workbench-lab/`. This is the confirmed architecture per ADR-005 and ADR-006.
 
 ```
-BEGINNERS GUIDE (Option A — Standalone Clone):
+CURRENT SETUP (Submodule Pattern):
 ~/AGENTIC_DEVELOPMENT_PROJECTS/
-├── agentic-workbench-engine/    # Standalone clone from GitHub
-├── agentic-workbench-lab/       # Standalone clone from GitHub
-├── APPLICATION-PROJECTS/
-└── archive/
-
-CURRENT SETUP (Option B — Submodule):
-~/AGENTIC_DEVELOPMENT_PROJECTS/
-├── agentic-workbench-lab/       # Standalone clone from GitHub
-│   └── agentic-workbench-engine/ # GIT SUBMODULE inside lab
-├── projects/                     # Wrong name (should be APPLICATION-PROJECTS)
+├── agentic-workbench-lab/       # Lab repo
+│   └── agentic-workbench-engine/ # GIT SUBMODULE (pinned to commit 54b4d0a)
+├── agentic-workbench-engine/    # Standalone canonical repo (reference)
+├── projects/                     # Should be renamed to APPLICATION-PROJECTS
 └── archive/
 ```
 
-### Option A: Match Beginners Guide (Standalone)
+### B.2 Benefits of Submodule Pattern
 
-**Pros:**
-- Matches Beginners Guide exactly
-- Simpler mental model for beginners
-- Engine can be updated independently
-
-**Cons:**
-- Requires restructuring existing setup
-- Two separate git histories
-- More disk space
-
-**Steps:**
-1. Clone `agentic-workbench-engine` as standalone repo
-2. Remove submodule from inside `agentic-workbench-lab`
-3. Update all paths that reference engine location
-4. Rename `projects/` → `APPLICATION-PROJECTS/`
-
-### Option B: Keep Current Submodule Pattern
-
-**Pros:**
-- Already working
-- Engine version locked to lab version
-- Simpler for version synchronization
-
-**Cons:**
-- Deviates from Beginners Guide documentation
-- May confuse future readers
-- Path references in docs won't match
-
-**Steps:**
-1. Update Beginners Guide to document submodule pattern
-2. Update all path references in documentation
-3. Create CONFIG-DOTFILES setup
-4. Continue with remaining setup items
+- Engine version locked to lab version via gitlink
+- Single source of truth: the submodule always matches the canonical engine at a specific commit
+- Simpler for version synchronization across cloned repos
+- ADR-005 compliance: embedded engine is always in sync via submodule pinning
 
 ---
 
@@ -121,7 +85,7 @@ ls -la ~/
 ls -la ~/AGENTIC_DEVELOPMENT_PROJECTS/
 
 # 3. Check if CONFIG-DOTFILES exists
-ls -la ~/CONFIG-DOTFILES/ 2>/dev/null || echo "CONFIG-DOTFILES does not exist"
+ls -la ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/ 2>/dev/null || echo "CONFIG-DOTFILES does not exist"
 
 # 4. Check symlinks
 ls -la ~/.roo-settings.json ~/.gitconfig ~/.bashrc ~/.ssh/config 2>&1
@@ -129,32 +93,33 @@ ls -la ~/.roo-settings.json ~/.gitconfig ~/.bashrc ~/.ssh/config 2>&1
 # 5. Check VS Code config
 ls -la ~/.config/Code/User/ 2>&1
 
-# 6. Check if engine is submodule (inside lab) or standalone
-cat ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/.gitmodules 2>/dev/null || echo "No .gitmodules in lab"
+# 6. Check submodule is present
+cat ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/.gitmodules
 
-# 7. Test workbench CLI (current path)
+# 7. Verify submodule content
+ls -la ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine/
+
+# 8. Test workbench CLI
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
 python agentic-workbench-engine/workbench-cli.py --version 2>/dev/null || echo "CLI not found at expected path"
 ```
 
-### Phase 2: Decision Implementation — OPTION A (STANDALONE)
+### Phase 2: Rename projects Folder
 
 | Step | Action | Command |
 |------|--------|---------|
-| 2.1 | Clone engine as standalone repo | `git clone git@github.com:nghiaphan31/agentic-workbench-engine.git ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/` |
-| 2.2 | Remove submodule from inside lab | Edit `.gitmodules`, remove engine submodule, `git rm -r agentic-workbench-engine/` |
-| 2.3 | Rename projects folder | `mv projects APPLICATION-PROJECTS` |
-| 2.4 | Verify structure | `ls -la ~/AGENTIC_DEVELOPMENT_PROJECTS/` |
+| 2.1 | Rename projects folder | `mv projects APPLICATION-PROJECTS` |
+| 2.2 | Verify structure | `ls -la ~/AGENTIC_DEVELOPMENT_PROJECTS/` |
 
 ### Phase 3: CONFIG-DOTFILES Setup
 
 | Step | Action | Command |
 |------|--------|---------|
 | 3.1 | Create GitHub repo | Go to github.com/new, name `dotfiles`, make PRIVATE |
-| 3.2 | Clone to calypso | `git clone https://github.com/nghiaphan31/dotfiles.git ~/CONFIG-DOTFILES` |
-| 3.3 | Create folder structure | `mkdir -p ~/CONFIG-DOTFILES/.config/VS\ Code ~/CONFIG-DOTFILES/.ssh` |
-| 3.4 | Copy existing configs | `cp ~/.config/Code/User/settings.json ~/CONFIG-DOTFILES/.config/VS\ Code/` (if exists) |
-| 3.5 | Initial commit | `cd ~/CONFIG-DOTFILES && git add . && git commit -m "Initial config"` |
+| 3.2 | Clone to calypso | `git clone https://github.com/nghiaphan31/dotfiles.git ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES` |
+| 3.3 | Create folder structure | `mkdir -p ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.ssh` |
+| 3.4 | Copy existing configs | `cp ~/.config/Code/User/settings.json ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/` (if exists) |
+| 3.5 | Initial commit | `cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES && git add . && git commit -m "Initial config"` |
 | 3.6 | Push to GitHub | `git push -u origin main` |
 
 ### Phase 4: Create Symlinks on Calypso
@@ -164,20 +129,20 @@ cd ~
 
 # VS Code config
 mkdir -p ~/.config/Code/User
-ln -sf ~/CONFIG-DOTFILES/.config/VS\ Code/settings.json ~/.config/Code/User/settings.json
-ln -sf ~/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json ~/.config/Code/User/keybindings.json
+ln -sf ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/settings.json ~/.config/Code/User/settings.json
+ln -sf ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json ~/.config/Code/User/keybindings.json
 
 # Roo Code settings
-ln -sf ~/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
+ln -sf ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
 
 # Git config
-ln -sf ~/CONFIG-DOTFILES/.gitconfig ~/.gitconfig
+ln -sf ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.gitconfig ~/.gitconfig
 
 # SSH config
-ln -sf ~/CONFIG-DOTFILES/.ssh/config ~/.ssh/config
+ln -sf ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.ssh/config ~/.ssh/config
 
 # Bash profile
-ln -sf ~/CONFIG-DOTFILES/.bashrc ~/.bashrc
+ln -sf ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.bashrc ~/.bashrc
 ```
 
 ### Phase 5: Windows PC Setup
@@ -186,21 +151,21 @@ On **Windows laptop** via PowerShell or Git Bash:
 
 ```bash
 # Clone dotfiles
-git clone https://github.com/nghiaphan31/dotfiles.git C:\Users\nghia\CONFIG-DOTFILES
+git clone https://github.com/nghiaphan31/dotfiles.git C:\Users\nghia\AGENTIC_DEVELOPMENT_PROJECTS\CONFIG-DOTFILES
 
 # Create symlinks
 cd ~
-ln -s /c/Users/nghia/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
-ln -s /c/Users/nghia/CONFIG-DOTFILES/.gitconfig .gitconfig
+ln -s /c/Users/nghia/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
+ln -s /c/Users/nghia/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.gitconfig .gitconfig
 mkdir -p ~/.config/Code/User
-ln -s /c/Users/nghia/CONFIG-DOTFILES/.config/VS\ Code/settings.json ~/.config/Code/User/settings.json
-ln -s /c/Users/nghia/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json ~/.config/Code/User/keybindings.json
-ln -s /c/Users/nghia/CONFIG-DOTFILES/.bashrc .bashrc
+ln -s /c/Users/nghia/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/settings.json ~/.config/Code/User/settings.json
+ln -s /c/Users/nghia/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json ~/.config/Code/User/keybindings.json
+ln -s /c/Users/nghia/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.bashrc .bashrc
 ```
 
 ### Phase 6: SSH Config for Calypso
 
-Add to `~/CONFIG-DOTFILES/.ssh/config`:
+Add to `~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.ssh/config`:
 
 ```ssh-config
 Host calypso
@@ -239,30 +204,34 @@ ls -la ~ | grep -E "^l"
 
 # 5. Run arbiter check
 python agentic-workbench-engine/.workbench/scripts/arbiter_check.py check-session
+
+# 6. Verify submodule status
+git submodule status
 ```
 
 ---
 
 ## Part D: Decisions Confirmed
 
-### D.1 Folder Structure Decision: ✅ OPTION A (STANDALONE)
+### D.1 Folder Structure Decision: ✅ SUBMODULE PATTERN
 
-**Decision:** User confirmed **Option A (Standalone)** — 2 separate git repos at same level.
+**Decision:** Engine is a git submodule inside `agentic-workbench-lab/` — confirmed via ADR-005 and ADR-006.
 
 **Final structure on calypso:**
 ```
 ~/AGENTIC_DEVELOPMENT_PROJECTS/
-├── agentic-workbench-engine/    # Standalone git clone (canonical engine)
-├── agentic-workbench-lab/       # Standalone git clone (lab development)
-├── APPLICATION-PROJECTS/       # Your application projects
-└── archive/                    # Archived projects
+├── agentic-workbench-lab/           # Lab repo
+│   └── agentic-workbench-engine/    # GIT SUBMODULE (pinned to 54b4d0a)
+├── agentic-workbench-engine/        # Standalone canonical repo (reference)
+├── APPLICATION-PROJECTS/          # Your application projects
+└── archive/                         # Archived projects
 ```
 
 **Benefits:**
-- Matches Beginners Guide exactly
-- Independent git repos — simpler mental model
-- Can upgrade engine independently
-- Clear separation of concerns
+- Submodule aligns with ADR-005: embedded engine always in sync via gitlink
+- Version pinning: lab repo tests specific engine commit
+- Single source of truth in canonical engine repo
+- No silent drift risk
 
 ### D.2 CONFIG-DOTFILES Repo: PENDING
 
@@ -277,10 +246,10 @@ Phase 1: Pre-Implementation Verification
 [ ] SSH to calypso and verify actual filesystem state
 [ ] Document findings of existing symlinks/configs
 
-Phase 2: Architecture Decision
-[ ] User confirms Option A or Option B for folder structure
-[ ] If Option A: restructure folder layout
-[ ] If Option B: update documentation to reflect submodule pattern
+Phase 2: Folder Structure
+[x] Submodule pattern confirmed (ADR-005, ADR-006)
+[x] Submodule added to lab repo
+[ ] Rename projects/ → APPLICATION-PROJECTS/
 
 Phase 3: CONFIG-DOTFILES Setup
 [ ] Create GitHub repo for dotfiles
@@ -319,24 +288,26 @@ From [`docs/Beginners_Guide.md`](docs/Beginners_Guide.md) lines 210-286:
 # Step 2.7: Clone Workbench Repos
 mkdir -p AGENTIC_DEVELOPMENT_PROJECTS
 cd AGENTIC_DEVELOPMENT_PROJECTS
-git clone https://github.com/nghiaphan31/agentic-workbench-engine.git
 git clone https://github.com/nghiaphan31/agentic-workbench-lab.git
+cd agentic-workbench-lab
+git submodule update --init --recursive
 mkdir APPLICATION-PROJECTS
 mkdir archive
 
-# Step 2.8: Sync dotfiles
-cd ~/CONFIG-DOTFILES
+# Step 2.8: Sync dotfiles (after creating CONFIG-DOTFILES)
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES
 cd ~
-ln -s ~/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
-ln -s ~/CONFIG-DOTFILES/.gitconfig .gitconfig
-ln -s ~/CONFIG-DOTFILES/.bashrc .bashrc
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.gitconfig .gitconfig
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.bashrc .bashrc
 mkdir -p .config/Code/User
-ln -s ~/CONFIG-DOTFILES/.config/VS\ Code/settings.json .config/Code/User/settings.json
-ln -s ~/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json .config/Code/User/keybindings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/settings.json .config/Code/User/settings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json .config/Code/User/keybindings.json
 mkdir -p .ssh
-ln -s ~/CONFIG-DOTFILES/.ssh/config .ssh/config
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.ssh/config .ssh/config
 
 # Step 2.9: Verify Setup
-cd AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine
-python workbench-cli.py --version
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
+python agentic-workbench-engine/workbench-cli.py --version
+git submodule status
 ```

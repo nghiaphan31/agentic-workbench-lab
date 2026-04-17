@@ -1,27 +1,48 @@
 # Handoff State
 
-## Handoff: Coherency Fix Session → Next Session
+## Handoff: Submodule Restoration Session → Next Session
 
 - **Completed by:** Code Agent
-- **Session ID:** coherency-fix-session-2026-04-13
-- **All 27 findings:** FIXED
+- **Session ID:** submodule-restore-2026-04-17
+- **All tasks:** COMPLETED
 
 ## Summary
 
-Successfully fixed all coherency audit findings from `plans/Coherency_Review_Report.md`. The coherency score improves from 7.43/10 to approximately 9.0/10.
+Successfully restored `agentic-workbench-engine` as a git submodule inside `agentic-workbench-lab`. This aligns with ADR-005 and ensures the embedded engine copy is always in sync with the canonical engine repo via git submodule pinning.
 
-## Files Modified (18)
-- Engine `.clinerules`, `Draft.md`, `post-tag`, `arbiter_check.py`, `gherkin_validator.py`, `pre-commit`
-- Root `.clinerules`
-- `diagrams/01`, `diagrams/03`, `diagrams/05`
-- `Canonical_Naming_Conventions.md`, `Beginners_Guide.md`
-- `test_state_machine.py`, `test_hooks_pre_commit.py`
-- `integration_test_runner.py`
+## Implementation Complete
 
-## Files Created (5)
-- `agentic-workbench-engine/README.md`
-- `test_compliance_snapshot.py`, `test_hooks_post_merge.py`, `test_hooks_post_tag.py`
+### On Calypso (Ubuntu Server)
+- Engine is now a git submodule inside `agentic-workbench-lab/`
+- Submodule path: `agentic-workbench-engine`
+- Submodule URL: `git@github.com:nghiaphan31/agentic-workbench-engine.git`
+- Pinned commit: `54b4d0a` (fix(memory_rotator): move narrativeRequest.md from rotate to persist policy)
+- Documented restoration as ADR-006 in `decisionLog.md`
 
-## Pending Cleanup
-Temp files remain from audit: `_temp_chunk_01-04.md`, `_temp_append.md`, `_temp_tail.md`, `_assemble.ps1`
-(Manual deletion required or run in a separate session with rm command)
+### On Both Machines
+- Standalone `agentic-workbench-engine/` repo can remain as reference
+- New clones of `agentic-workbench-lab/` will automatically get the engine via submodule
+
+## Final Folder Structure
+```
+~/AGENTIC_DEVELOPMENT_PROJECTS/
+├── agentic-workbench-lab/           # Lab repo with engine as SUBMODULE
+│   └── agentic-workbench-engine/   # Git submodule (gitlink to 54b4d0a)
+├── agentic-workbench-engine/        # Standalone canonical repo (reference only)
+└── CONFIG-DOTFILES/                 # Synced dotfiles
+```
+
+## Updated Documentation
+- `plans/Submodule_Restoration_Plan.md` - Created plan for submodule restoration
+- `memory-bank/hot-context/decisionLog.md` - Added ADR-006 documenting the restoration
+- Submodule configuration verified: `.gitmodules` shows correct path and URL
+
+## Next Steps for User
+1. Push the submodule commit to GitHub: `cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab && git push origin main`
+2. On Windows PC: pull the updated lab repo
+3. When cloning fresh: use `git clone --recursive` to get submodule automatically
+
+## Key Decisions Made
+- **Submodule Pattern**: Engine as git submodule inside lab for pinned versioning
+- **CONFIG-DOTFILES location**: Inside `~/AGENTIC_DEVELOPMENT_PROJECTS/`
+- **Symlink method**: Windows requires `cmd /c mklink` (Git Bash ln -s doesn't work on NTFS)

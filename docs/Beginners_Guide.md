@@ -142,8 +142,8 @@ On **Ubuntu Server**:
 # 4. Don't add README (start empty)
 
 # Then clone it locally
-git clone https://github.com/nghiaphan31/dotfiles.git ~/CONFIG-DOTFILES
-cd ~/CONFIG-DOTFILES
+git clone https://github.com/nghiaphan31/dotfiles.git ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES
 
 # Create folder structure
 mkdir -p .config/VS\ Code .ssh
@@ -248,20 +248,20 @@ On **Ubuntu Server**:
 
 ```bash
 # Navigate to dotfiles
-cd ~/CONFIG-DOTFILES
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES
 
 # Create symlinks
 cd ~
 
 # Link dotfiles to their proper locations
-ln -s ~/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
-ln -s ~/CONFIG-DOTFILES/.gitconfig .gitconfig
-ln -s ~/CONFIG-DOTFILES/.bashrc .bashrc
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.gitconfig .gitconfig
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.bashrc .bashrc
 mkdir -p .config/Code/User
-ln -s ~/CONFIG-DOTFILES/.config/VS\ Code/settings.json .config/Code/User/settings.json
-ln -s ~/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json .config/Code/User/keybindings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/settings.json .config/Code/User/settings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json .config/Code/User/keybindings.json
 mkdir -p .ssh
-ln -s ~/CONFIG-DOTFILES/.ssh/config .ssh/config
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.ssh/config .ssh/config
 
 # Verify
 ls -la ~
@@ -431,7 +431,7 @@ VS Code opens the project. You should see the workbench structure in the Explore
 **On Ubuntu Server:**
 
 ```bash
-cd ~/CONFIG-DOTFILES
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES
 
 # Make changes to config files
 # e.g., edit VS Code settings
@@ -446,7 +446,7 @@ git push
 **On Windows PC (via Git Bash):**
 
 ```bash
-cd ~/CONFIG-DOTFILES
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES
 
 # Pull latest changes
 git pull
@@ -463,14 +463,14 @@ git pull
 Example - adding iTerm2 config (Mac):
 ```bash
 # On Mac
-cp ~/Library/Application\ Support/iTerm/com.apple.Terminal.plist ~/CONFIG-DOTFILES/
-cd ~/CONFIG-DOTFILES
+cp ~/Library/Application\ Support/iTerm/com.apple.Terminal.plist ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES
 git add .
 git commit -m "Add iTerm config"
 git push
 
 # On other machines, create the symlink
-ln -s ~/CONFIG-DOTFILES/com.apple.Terminal.plist ~/Library/Application\ Support/iTerm/
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/com.apple.Terminal.plist ~/Library/Application\ Support/iTerm/
 ```
 
 ### Verifying Symlinks
@@ -481,7 +481,7 @@ ls -la ~ | grep -E "(roo|git|ssh|bash)"
 
 # If broken (shows red), recreate
 unlink ~/.roo-settings.json
-ln -s ~/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
 ```
 
 ---
@@ -498,7 +498,7 @@ ln -s ~/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git pull
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab && git pull
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app && git pull
-cd ~/CONFIG-DOTFILES && git pull
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES && git pull
 
 # Work normally - all files are local
 # When back online:
@@ -673,7 +673,7 @@ Refs: REQ-042"
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git pull
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab && git pull
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app && git pull
-cd ~/CONFIG-DOTFILES && git pull
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES && git pull
 ```
 
 **After finishing work:**
@@ -957,7 +957,7 @@ If a symlink shows as broken (red text in `ls -la`):
 unlink ~/.roo-settings.json
 
 # Recreate the symlink
-ln -s ~/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
+ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
 ```
 
 ### VS Code Remote SSH disconnects
