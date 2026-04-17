@@ -1,358 +1,903 @@
-# Agentic Workbench v2 — Beginner's Guide
+﻿# Agentic Workbench v2 â€” Beginner's Guide
 
-This guide provides clear, step-by-step instructions for two scenarios:
-1. **Starting a new application project** with the Agentic Workbench
-2. **Upgrading an existing project** to a newer version of the workbench
-
----
-
-## Prerequisites
-
-Before using the Agentic Workbench, you need:
-
-- **Python 3.10+** installed and accessible from command line
-- **Git** installed and configured (with your name and email)
-- **VS Code** installed (recommended)
-- **Roo Code extension** installed in VS Code
-- Access to the `agentic-workbench-engine` repository (canonical engine)
+**Last updated:** 2026-04-17  
+**Architecture:** Ubuntu Server (main dev host) + Windows PC (thin interface via Remote SSH)
 
 ---
 
-## Part 1: Starting a New Application Project
+## Table of Contents
 
-This section walks you through creating a brand new application from scratch using the Agentic Workbench.
+1. [Understanding the Architecture](#part-1-understanding-the-architecture)
+2. [One-Time Setup](#part-2-one-time-setup-both-machines)
+3. [Starting Your First Project](#part-3-starting-your-first-project)
+4. [Configuration Sync Workflow](#part-4-configuration-sync-workflow)
+5. [Backup & Disaster Recovery](#part-5-backup--disaster-recovery)
+6. [Continuing Development](#part-6-continuing-development)
+7. [Upgrading](#part-7-upgrading)
+8. [Developing the Workbench](#part-8-developing-the-workbench-itself)
+9. [Troubleshooting](#appendix-a-troubleshooting)
+10. [Key Commands Reference](#appendix-b-key-commands-reference)
+11. [State Machine Reference](#appendix-c-understanding-the-state-machine)
 
-### Step 1.1: Install the Workbench CLI
+---
 
-The Workbench Command-Line Interface (CLI) is the bootstrapper that sets up new projects and upgrades existing ones.
+## Part 1: Understanding the Architecture
 
-**Option A: Clone the template repository (recommended)**
+### Overview
 
-```bash
-# Clone the template repository to a convenient location
-git clone https://github.com/your-org/agentic-workbench-engine.git ~/agentic-workbench-engine
+The Agentic Workbench is designed for a **two-machine setup**:
 
-# Verify the clone succeeded
-cd ~/agentic-workbench-engine
-ls -la
+| Machine | Role | Notes |
+|---------|------|-------|
+| **Ubuntu Server** | Main development host | 24/7 uptime, GPU available, runs VS Code Server |
+| **Windows PC** | Thin interface only | Connects via VS Code Remote SSH, no local dev |
+
+### Why This Architecture?
+
+- **Token efficiency:** All heavy processing (bash, Python, GPU) runs on Ubuntu
+- **Windows avoidance:** Bash on Ubuntu is cleaner than PowerShell
+- **Consistency:** Same folder structure and configs on all machines
+- **Persistence:** Ubuntu server is always on, so agents can run 24/7
+
+### Folder Structure (Same on ALL Machines)
+
+```
+AGENTIC_DEVELOPMENT_PROJECTS/
+â”œâ”€â”€ agentic-workbench-engine/    # Canonical engine (cloned from GitHub)
+â”œâ”€â”€ agentic-workbench-lab/        # This repo (workbench development)
+â”œâ”€â”€ APPLICATION-PROJECTS/         # Your application projects
+â”‚   â”œâ”€â”€ my-app-1/
+â”‚   â””â”€â”€ my-app-2/
+â””â”€â”€ archive/                      # Archived projects
 ```
 
-You should see these key files:
-- `workbench-cli.py` — the main CLI tool
-- `.clinerules` — system guardrails
-- `.roomodes` — custom agent modes
-- `.workbench/` — Arbiter scripts directory
+### How Machines Connect
 
-**Option B: pip install — Local install supported**
-
-```bash
-# Local install via pyproject.toml in agentic-workbench-engine/
-# PyPI publishing pending — coming soon
-pip install -e agentic-workbench-engine/
+```
+Windows PC  â†â†’  Tailscale VPN  â†â†’  Ubuntu Server (24/7)
+     â†“                              â†“
+VS Code Remote SSH            VS Code Server
+     â†“                              â†“
+   (Display only)            (All development work)
 ```
 
-### Step 1.2: Add the CLI to your system PATH
+### What Gets Synced
 
-For the `workbench-cli.py` command to work from any directory, add it to your PATH:
+| Config | Path | Sync Method |
+|--------|------|-------------|
+| VS Code Settings | `~/.config/Code/User/settings.json` | Git + symlink |
+| VS Code Keybindings | `~/.config/Code/User/keybindings.json` | Git + symlink |
+| Roo Code Settings | `~/.roo-settings.json` | Git + symlink |
+| Git Config | `~/.gitconfig` | Git + symlink |
+| SSH Config | `~/.ssh/config` | Git + symlink |
+| Shell Profile | `~/.bashrc` | Git + symlink |
 
-**On macOS/Linux — Add to ~/.bashrc or ~/.zshrc:**
+All configs live in `CONFIG-DOTFILES/` repo on GitHub, symlinked to their proper locations on each machine.
 
+### Prerequisites
+
+Before setting up, ensure you have:
+
+- **GitHub account** with access to `nghiaphan31` repos
+- **Ubuntu server** with:
+  - Ubuntu 20.04+ installed
+  - SSH server running
+  - Python 3.10+
+  - Git installed
+  - Tailscale installed and joined to your tailnet
+- **Windows PC** with:
+  - VS Code installed
+  - Tailscale installed and joined to your tailnet
+  - Git installed (for bash/git operations)
+
+---
+
+## Part 2: One-Time Setup (Both Machines)
+
+### Step 2.1: Install Tailscale on Both Machines
+
+Tailscale provides the VPN between your machines.
+
+**On Ubuntu Server:**
 ```bash
-# Add this line to your shell config file
-export PATH="$PATH:~/agentic-workbench-engine"
+# Install Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
 
-# Reload your shell config
-source ~/.bashrc   # or: source ~/.zshrc
+# Authenticate (one-time)
+sudo tailscale up --accept-dns
+
+# Note the machine name for SSH
+hostname  # e.g., "ubuntu-server"
+tailscale ip  # e.g., "100.64.1.2"
 ```
 
-**On Windows:**
+**On Windows PC:**
+1. Download Tailscale from https://tailscale.com/download
+2. Install and authenticate with the same Google/GitHub account
+3. Verify both machines appear in the Tailscale admin console
 
-1. Press `Win + R`, type `sysdm.cpl`, press Enter
-2. Go to **Advanced** → **Environment Variables**
-3. Under **User variables**, find **Path** and click **Edit**
-4. Click **New** and add: `C:\Users\YourUsername\agentic-workbench-engine`
-5. Click **OK** on all dialogs
-
-**Verify the CLI is accessible:**
+### Step 2.2: Enable SSH on Ubuntu Server
 
 ```bash
-# Open a new terminal and run:
+# Install OpenSSH if not present
+sudo apt update && sudo apt install -y openssh-server
+
+# Enable and start SSH
+sudo systemctl enable ssh
+sudo systemctl start ssh
+
+# Test from Windows: open PowerShell
+ssh nghia@<ubuntu-ip>
+```
+
+### Step 2.3: Create CONFIG-DOTFILES Repo on GitHub
+
+On **Ubuntu Server**:
+
+```bash
+# Create the repo on GitHub first:
+# 1. Go to https://github.com/new
+# 2. Name it "dotfiles" or "config-dotfiles"
+# 3. Make it PRIVATE
+# 4. Don't add README (start empty)
+
+# Then clone it locally
+git clone https://github.com/nghiaphan31/dotfiles.git ~/CONFIG-DOTFILES
+cd ~/CONFIG-DOTFILES
+
+# Create folder structure
+mkdir -p .config/VS\ Code .ssh
+
+# Copy existing configs (if they exist)
+cp ~/.config/Code/User/settings.json .config/VS\ Code/ 2>/dev/null || true
+cp ~/.config/Code/User/keybindings.json .config/VS\ Code/ 2>/dev/null || true
+cp ~/.roo-settings.json . 2>/dev/null || true
+cp ~/.gitconfig . 2>/dev/null || true
+cp ~/.ssh/config .ssh/ 2>/dev/null || true
+cp ~/.bashrc . 2>/dev/null || true
+
+# Initial commit and push
+git add .
+git commit -m "Initial config from Ubuntu"
+git push -u origin main
+```
+
+### Step 2.4: Clone dotfiles on Windows PC
+
+Open **PowerShell** (or Git Bash):
+
+```bash
+# Clone the dotfiles repo to the same path structure
+git clone https://github.com/nghiaphan31/dotfiles.git C:\Users\nghia\CONFIG-DOTFILES
+
+# Navigate to it
+cd C:\Users\nghia\CONFIG-DOTFILES
+
+# Create symlinks for each config
+# (Requires admin or use Git Bash)
+
+# For Git Bash (easier):
+cd ~  # Go home
+
+# Create symlinks
+ln -s /c/Users/nghia/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
+ln -s /c/Users/nghia/CONFIG-DOTFILES/.gitconfig .gitconfig
+mkdir -p ~/.config/Code/User
+ln -s /c/Users/nghia/CONFIG-DOTFILES/.config/VS\ Code/settings.json ~/.config/Code/User/settings.json
+ln -s /c/Users/nghia/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json ~/.config/Code/User/keybindings.json
+ln -s /c/Users/nghia/CONFIG-DOTFILES/.bashrc .bashrc
+```
+
+### Step 2.5: Install VS Code Server on Ubuntu
+
+On **Windows PC**, open VS Code and connect to Ubuntu:
+
+1. Install the **Remote - SSH** extension in VS Code
+2. Press `Ctrl+Shift+P`, type "Remote-SSH: Connect to Host"
+3. Enter `nghia@<ubuntu-ip>` (e.g., `nghia@100.64.1.2`)
+4. Enter your password (or setup SSH key)
+
+VS Code Server will be installed on Ubuntu automatically.
+
+### Step 2.6: Install Roo Code Extension
+
+Once connected to Ubuntu via Remote SSH:
+
+1. Go to Extensions in VS Code (left sidebar)
+2. Search for "Roo Code"
+3. Install the extension
+
+### Step 2.7: Clone Workbench Repos on Ubuntu
+
+On **Ubuntu Server** (via VS Code Remote SSH):
+
+```bash
+# Navigate to your home directory
+cd ~
+
+# Create the main projects folder
+mkdir -p AGENTIC_DEVELOPMENT_PROJECTS
+cd AGENTIC_DEVELOPMENT_PROJECTS
+
+# Clone the engine (canonical template)
+git clone https://github.com/nghiaphan31/agentic-workbench-engine.git
+
+# Clone this repo (workbench lab for development)
+git clone https://github.com/nghiaphan31/agentic-workbench-lab.git
+
+# Create application projects folder (empty for now)
+mkdir APPLICATION-PROJECTS
+mkdir archive
+
+# Verify the structure
+ls -la AGENTIC_DEVELOPMENT_PROJECTS/
+```
+
+Expected output:
+```
+AGENTIC_DEVELOPMENT_PROJECTS/
+â”œâ”€â”€ agentic-workbench-engine/
+â”œâ”€â”€ agentic-workbench-lab/
+â”œâ”€â”€ APPLICATION-PROJECTS/
+â””â”€â”€ archive/
+```
+
+### Step 2.8: Sync dotfiles on Ubuntu
+
+On **Ubuntu Server**:
+
+```bash
+# Navigate to dotfiles
+cd ~/CONFIG-DOTFILES
+
+# Create symlinks
+cd ~
+
+# Link dotfiles to their proper locations
+ln -s ~/CONFIG-DOTFILES/.roo-settings.json .roo-settings.json
+ln -s ~/CONFIG-DOTFILES/.gitconfig .gitconfig
+ln -s ~/CONFIG-DOTFILES/.bashrc .bashrc
+mkdir -p .config/Code/User
+ln -s ~/CONFIG-DOTFILES/.config/VS\ Code/settings.json .config/Code/User/settings.json
+ln -s ~/CONFIG-DOTFILES/.config/VS\ Code/keybindings.json .config/Code/User/keybindings.json
+mkdir -p .ssh
+ln -s ~/CONFIG-DOTFILES/.ssh/config .ssh/config
+
+# Verify
+ls -la ~
+ls -la .config/Code/User/
+```
+
+### Step 2.9: Verify Setup
+
+On **Ubuntu Server**, open VS Code (`code .`) and verify:
+
+1. **Roo Code extension** is active (green icon in sidebar)
+2. **`.clinerules`** file is visible in the root
+3. **`state.json`** exists
+4. The workbench scripts are present in `.workbench/`
+
+Test the CLI:
+```bash
+cd AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine
 python workbench-cli.py --version
 ```
 
-You should see output like: `Agentic Workbench CLI v2.1`
-
-### Step 1.3: Create your new project directory
-
-Decide where you want your new application to live. For this guide, we'll create a project called `my-first-workbench-app`.
-
-```bash
-# Navigate to where you keep your projects
-cd ~/projects
-
-# Create the project directory (don't cd into it yet — the CLI does that)
-# The CLI will create this directory if it doesn't exist
-```
-
-### Step 1.4: Initialize the project
-
-Now run the initialization command. This is the most important step — it sets up the entire project scaffold.
-
-```bash
-# Run the initialization command
-# Replace "my-first-workbench-app" with your desired project name
-python workbench-cli.py init my-first-workbench-app
-```
-
-**What happens during initialization:**
-
-1. **Directory Creation** — Creates `my-first-workbench-app/` folder and `cd`s into it
-2. **Git Initialization** — Runs `git init` and sets branch to `main`
-3. **Directory Scaffolding** — Creates the required folder structure:
-   ```
-   my-first-workbench-app/
-   ├── .workbench/
-   │   ├── hooks/          # Git hooks (pre-commit, pre-push, etc.)
-   │   └── scripts/        # Arbiter Python scripts
-   ├── docs/
-   │   └── conversations/  # Audit trail for sessions
-   ├── features/           # Gherkin feature files
-   ├── memory-bank/
-   │   ├── archive-cold/   # Rotated-out memory files
-   │   └── hot-context/    # Active memory files
-   ├── src/                # Your application source code
-   ├── tests/
-   │   ├── integration/    # Integration tests
-   │   └── unit/          # Unit/acceptance tests
-   ├── _inbox/             # Draft feature ideas (not yet official)
-   ├── .clinerules         # System guardrails (copied from template)
-   ├── .roomodes           # Custom agent modes (copied from template)
-   ├── .roo-settings.json  # Roo Code settings
-   ├── .workbench-version  # Workbench version file
-   └── state.json          # Master state file
-   ```
-4. **Engine Injection** — Copies `.clinerules`, `.roomodes`, and scripts from the template
-5. **State Initialization** — Creates `state.json` with initial state:
-   ```json
-   {
-     "state": "INIT",
-     "arbiter_capabilities": { ... }
-   }
-   ```
-6. **Initial Commit** — Automatically commits everything as:
-   ```
-   chore(workbench): initialize Agentic Workbench v2.1
-   ```
-
-**If initialization succeeds, you'll see:**
-```
-[WORKBENCH-CLI] Project initialized successfully!
-  Navigate to: cd my-first-workbench-app
-  Next: Open in VS Code with Roo Code extension
-```
-
-### Step 1.5: Open the project in VS Code
-
-```bash
-# Navigate into your new project
-cd my-first-workbench-app
-
-# Open it in VS Code
-code .
-```
-
-**Alternative — without using the `code` command:**
-1. Open VS Code
-2. File → Open Folder
-3. Navigate to `~/projects/my-first-workbench-app`
-4. Click "Open"
-
-### Step 1.6: Configure Roo Code settings
-
-The `.roo-settings.json` file contains auto-approve rules for Roo Code. These rules define which commands Roo Code can run without asking for human approval.
-
-**For a brand new project in Phase A (pre-Arbiter), the default settings are already configured.**
-
-To import the settings into Roo Code:
-1. Open the Command Palette: `Ctrl + Shift + P` (Windows/Linux) or `Cmd + Shift + P` (Mac)
-2. Type: `Roo Code: Import Settings`
-3. Press Enter
-4. Select the `.roo-settings.json` file from your project root
-
-**What the settings mean:**
-- `allowedCommands` — Commands Roo can run without asking (e.g., `git status`, `git diff`)
-- `deniedCommands` — Commands that always require approval (e.g., `git push`, `git commit`, `docker`)
-
-### Step 1.7: Understand the key files
-
-Before you start developing, familiarize yourself with these key files in your project:
-
-| File | Purpose |
-|------|---------|
-| **`state.json`** | The master state file. Tracks what stage the pipeline is in, which feature is active, and test results. **Read this before every session.** |
-| **`memory-bank/hot-context/activeContext.md`** | What you're working on right now. Updated every session. |
-| **`memory-bank/hot-context/progress.md`** | Checklist of all features and their status. |
-| **`memory-bank/hot-context/decisionLog.md`** | Architectural decisions made along the way. |
-| **`.clinerules`** | The rules Roo Code follows. **Read this before every session.** |
-| **`features/`** | Where your feature specifications live (Gherkin files). |
-
-### Step 1.8: Start your first feature
-
-You're now ready to start developing. Here's the workflow:
-
-1. **Inject intent** — Tell Roo Code (via Roo Chat) what you want to build. Example:
-   > "I want a user login system with email and password"
-
-2. **Architect Agent activates** (Stage 1) — Roo Code asks clarifying questions to understand the requirements. This is the Socratic interrogation phase.
-
-3. **Gherkin files created** — Roo Code translates your requirements into structured `.feature` files in `/features/`.
-
-4. **Human approval (HITL 1)** — You review the generated `.feature` files and approve them.
-
-5. **Test Engineer Agent activates** (Stage 2) — Roo Code writes failing tests for your features.
-
-6. **Developer Agent activates** (Stage 3) — Roo Code writes the actual code to make tests pass.
-
-7. **Review and merge** (Stage 4) — Human reviews the PR and approves merge.
-
-**For your first feature, start simple!** Try a small feature like "show current date" rather than a complex payment system.
+You should see: `Agentic Workbench CLI v2.2` or similar.
 
 ---
 
-## Part 2: Upgrading an Existing Project
+## Part 3: Starting Your First Project
 
-This section walks you through upgrading a project that's already using an older version of the Agentic Workbench to a newer version.
+### Step 3.1: Create Project Structure
 
-### Step 2.1: Check your current workbench version
+On **Ubuntu Server**:
 
 ```bash
-# Navigate to your existing project
-cd ~/projects/my-existing-workbench-app
+# Navigate to application projects
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS
 
-# Check the current version
-cat .workbench-version
+# Create a new project folder
+mkdir my-first-app
+cd my-first-app
+
+# Initialize with git
+git init
+git branch -m main
 ```
 
-You should see something like: `2.0`
+### Step 3.2: Run Workbench Init
 
-Also check `state.json` to understand the current project state:
+The workbench CLI bootstraps the project scaffold:
+
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-first-app
+
+# Run init with full path to the engine
+python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py init .
+```
+
+**What happens during init:**
+
+1. **Directory scaffold created:**
+   ```
+   my-first-app/
+   â”œâ”€â”€ .workbench/
+   â”‚   â”œâ”€â”€ hooks/          # Git hooks (pre-commit, pre-push)
+   â”‚   â””â”€â”€ scripts/        # Arbiter Python scripts
+   â”œâ”€â”€ docs/
+   â”‚   â””â”€â”€ conversations/  # Audit trail
+   â”œâ”€â”€ features/           # Gherkin feature files
+   â”œâ”€â”€ memory-bank/
+   â”‚   â”œâ”€â”€ archive-cold/   # Rotated memory
+   â”‚   â””â”€â”€ hot-context/    # Active memory
+   â”œâ”€â”€ src/                # Your application code
+   â”œâ”€â”€ tests/
+   â”‚   â”œâ”€â”€ integration/
+   â”‚   â””â”€â”€ unit/
+   â”œâ”€â”€ _inbox/             # Draft feature ideas
+   â”œâ”€â”€ .clinerules         # System guardrails
+   â”œâ”€â”€ .roomodes           # Custom agent modes
+   â”œâ”€â”€ .roo-settings.json  # Roo Code settings
+   â”œâ”€â”€ .workbench-version  # Version file
+   â””â”€â”€ state.json          # Master state
+   ```
+
+2. **State initialized:**
+   ```json
+   {
+     "state": "INIT",
+     "arbiter_capabilities": {
+       "git_commit": false,
+       "git_push": false,
+       "test_run": false,
+       "test_phase2": false,
+       "integration_run": false
+     }
+   }
+   ```
+
+3. **Initial commit created:**
+   ```
+   chore(workbench): initialize Agentic Workbench v2.2
+   ```
+
+### Step 3.3: Open in VS Code
+
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-first-app
+code .
+```
+
+VS Code opens the project. You should see the workbench structure in the Explorer.
+
+### Step 3.4: Configure Roo Code
+
+1. Open the Command Palette (`Ctrl+Shift+P`)
+2. Type: `Roo Code: Import Settings`
+3. Select `.roo-settings.json` from the project root
+4. The settings are now active
+
+### Step 3.5: Key Files to Know
+
+| File | Purpose |
+|------|---------|
+| `state.json` | Master state. **Read before every session.** |
+| `.clinerules` | System guardrails. **Read before every session.** |
+| `memory-bank/hot-context/activeContext.md` | Current task, last result, next steps |
+| `memory-bank/hot-context/progress.md` | Project checklist |
+| `memory-bank/hot-context/decisionLog.md` | Architectural decisions |
+| `features/` | Gherkin feature specifications |
+
+### Step 3.6: Start Your First Feature
+
+1. **Open Roo Chat** (green icon in sidebar or `Ctrl+Shift+G`)
+2. **Inject your intent:**
+   > "I want a simple greeting feature that says 'Hello, [name]!' when given a name"
+
+3. **Architect Agent activates** â€” Asks clarifying questions (Socratic phase)
+4. **Gherkin files created** in `/features/` â€” Feature specifications written
+5. **Human approval (HITL 1)** â€” You review and approve the `.feature` files
+6. **Test Engineer activates** â€” Writes failing tests for your feature
+7. **Developer activates** â€” Writes code to make tests pass
+8. **Review and merge** â€” Human reviews PR, approves merge
+
+**Tip:** Start with a small, simple feature. Don't try to build a complex system on your first attempt.
+
+---
+
+## Part 4: Configuration Sync Workflow
+
+### How Config Sync Works
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                     CONFIG-DOTFILES REPO                          â”‚
+â”‚  (GitHub: nghiaphan31/dotfiles)                                  â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚  .config/VS Code/settings.json  â†â”€â”€â†’  ~/.config/Code/User/       â”‚
+â”‚  .config/VS Code/keybindings.json â†â”€â”€â†’  (symlink)               â”‚
+â”‚  .roo-settings.json  â†â”€â”€â†’  ~/.roo-settings.json                  â”‚
+â”‚  .gitconfig  â†â”€â”€â†’  ~/.gitconfig                                  â”‚
+â”‚  .ssh/config  â†â”€â”€â†’  ~/.ssh/config                                â”‚
+â”‚  .bashrc  â†â”€â”€â†’  ~/.bashrc                                        â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+          â†‘                    â†‘                    â†‘
+     Ubuntu Server        Windows PC          Another PC
+```
+
+### Updating Configs on Any Machine
+
+**On Ubuntu Server:**
+
+```bash
+cd ~/CONFIG-DOTFILES
+
+# Make changes to config files
+# e.g., edit VS Code settings
+nano .config/VS\ Code/settings.json
+
+# Commit and push
+git add .
+git commit -m "Update VS Code settings"
+git push
+```
+
+**On Windows PC (via Git Bash):**
+
+```bash
+cd ~/CONFIG-DOTFILES
+
+# Pull latest changes
+git pull
+
+# Symlinks already point here, so changes apply automatically
+```
+
+### Adding New Config Files
+
+1. Add the config file to `CONFIG-DOTFILES/`
+2. Create symlink on each machine
+3. Commit and push
+
+Example - adding iTerm2 config (Mac):
+```bash
+# On Mac
+cp ~/Library/Application\ Support/iTerm/com.apple.Terminal.plist ~/CONFIG-DOTFILES/
+cd ~/CONFIG-DOTFILES
+git add .
+git commit -m "Add iTerm config"
+git push
+
+# On other machines, create the symlink
+ln -s ~/CONFIG-DOTFILES/com.apple.Terminal.plist ~/Library/Application\ Support/iTerm/
+```
+
+### Verifying Symlinks
+
+```bash
+# Check if symlink is valid
+ls -la ~ | grep -E "(roo|git|ssh|bash)"
+
+# If broken (shows red), recreate
+unlink ~/.roo-settings.json
+ln -s ~/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
+```
+
+---
+
+## Part 5: Backup & Disaster Recovery
+
+### Scenario A: PC Only, Offline
+
+**When:** No internet, only your Windows PC connected to nothing
+
+**Solution:**
+```bash
+# Before going offline, ensure all repos are up-to-date
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git pull
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab && git pull
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app && git pull
+cd ~/CONFIG-DOTFILES && git pull
+
+# Work normally - all files are local
+# When back online:
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git push
+# ... repeat for all repos
+```
+
+### Scenario B: Browser Only (Professional PC)
+
+**When:** Using a work PC that can't have VS Code installed
+
+**Solution: GitHub Codespaces**
+
+```bash
+# 1. Go to https://github.com/nghiaphan31/my-app
+
+# 2. Click "Code" â†’ "Create codespace on main"
+# This launches a full VS Code in your browser!
+
+# 3. Work normally - it's a full Ubuntu environment
+# 4. When done: git push to sync
+```
+
+**Limits:**
+- 60 hours/month free (varies by plan)
+- No GPU access
+- Good for quick fixes, not heavy development
+
+### Scenario C: Ubuntu Server Down
+
+**When:** Server is offline, being updated, or experiencing issues
+
+**Option 1: Work Locally on Windows**
+
+```bash
+# Install Python and Git on Windows if not present
+# Clone repos directly to Windows
+git clone https://github.com/nghiaphan31/my-app.git C:\Users\nghia\my-app
+
+# Work locally
+cd C:\Users\nghia\my-app
+code .
+
+# Later, when server is back: push changes
+git push
+```
+
+**Option 2: Use GitHub Codespaces**
+
+```bash
+# Temporarily use Codespaces as dev environment
+# See Scenario B above
+```
+
+**Option 3: Wait for Server Recovery**
+
+```bash
+# Check if server is reachable
+ping <ubuntu-ip>
+
+# If Tailscale is down, check if server is up via other means
+# SSH directly using local network IP (if on same network)
+ssh nghia@192.168.1.xx
+
+# When server returns:
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/my-app
+git pull  # Get any changes you made locally
+git push  # Sync back if you worked locally
+```
+
+### Recommended Backup Practices
+
+1. **Always `git push` when done** â€” GitHub is the backup
+2. **Commit early and often** â€” Don't have large uncommitted changes
+3. **Keep dotfiles repo in sync** â€” Your configs are as important as your code
+4. **Test restore occasionally** â€” Verify you can clone and setup on a fresh machine
+---
+
+## Part 6: Continuing Development
+
+### Daily Workflow
+
+**Every session, in order:**
+
+1. **SCAN â†’ CHECK â†’ CREATE â†’ READ â†’ ACT**
+   - Run: `python .workbench/scripts/arbiter_check.py check-session`
+   - Check for `activeContext.md`
+   - Read `activeContext.md` and `progress.md`
+   - Then start cognitive work
+
+2. **Start work**
+   - Open `state.json` â€” know the current state
+   - Open `activeContext.md` â€” know what's in progress
+   - Open `progress.md` â€” know the project checklist
+
+3. **Do work** with Roo Code agents
+
+4. **End of session**
+   - Update `activeContext.md` with status
+   - Update `progress.md` with completed items
+   - Run audit logger: `python .workbench/scripts/audit_logger.py save --session-id {session_id} --branch {branch}`
+   - Write handoff to `handoff-state.md`
+   - Commit and push
+
+### Reading State Files
+
+**state.json:**
 ```bash
 cat state.json
 ```
 
-**Important: The upgrade will be blocked if the project is in an active development state.**
+Key fields:
+- `state` â€” Current pipeline state (INIT, STAGE_1_ACTIVE, GREEN, etc.)
+- `active_req_id` â€” Which feature is currently active
+- `feature_registry` â€” All features and their states
 
-### Step 2.2: Ensure the project is in a safe state
+**activeContext.md:**
+```bash
+cat memory-bank/hot-context/activeContext.md
+```
 
-The Arbiter will refuse to upgrade if:
-- `state.json.state` is NOT `INIT` or `MERGED`
-- Tests are failing
-- An agent is mid-task
+Structure:
+```markdown
+## Current Task
+[What you're working on]
 
-**To prepare for upgrade:**
+## Last Result
+[What happened last session]
 
-1. **Wait for any active work to complete** — Let the current pipeline finish (feature reaches `MERGED`)
-2. **Or, reset to INIT if you want to force upgrade:**
-   ```bash
-   # Edit state.json and set:
-   # "state": "INIT"
-   ```
-   ⚠️ Only do this if you understand the consequences — it abandons any in-progress work.
+## Next Steps
+[What to do next]
+```
 
-3. **Verify no one is working:**
-   ```bash
-   cat memory-bank/hot-context/session-checkpoint.md
-   ```
-   If you see `status: ACTIVE`, someone is mid-session. Wait for them to finish.
+**progress.md:**
+```bash
+cat memory-bank/hot-context/progress.md
+```
 
-### Step 2.3: Update your local template copy
+Checkboxes for all features:
+- [x] REQ-001 - Done
+- [ ] REQ-002 - In progress
+- [ ] REQ-003 - Pending
 
-Before upgrading, sync your local template repository to get the latest workbench version:
+### Committing Work
+
+**Good commit practice:**
+```bash
+# Stage specific files
+git add features/REQ-042-login.feature src/auth.py tests/unit/test_auth.spec.ts
+
+# Commit with conventional format
+git commit -m "feat(REQ-042): implement login feature
+
+- Add email/password validation
+- Create User model
+- Add session management
+
+Refs: REQ-042"
+```
+
+**Commit types:**
+- `feat(REQ-NNN)` â€” New feature
+- `fix(REQ-NNN)` â€” Bug fix
+- `test(REQ-NNN)` â€” Test changes
+- `docs` â€” Documentation
+- `chore` â€” Maintenance (workbench updates)
+
+### Syncing Across Machines
+
+**Before starting work on any machine:**
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git pull
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab && git pull
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app && git pull
+cd ~/CONFIG-DOTFILES && git pull
+```
+
+**After finishing work:**
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app
+git add .
+git commit -m "feat(REQ-NNN): description"
+git push
+```
+
+---
+
+## Part 7: Upgrading
+
+### Understanding Upgrade Safety
+
+The workbench can only be upgraded when the project is in a **safe state**:
+
+| State | Upgrade Allowed? |
+|-------|------------------|
+| `INIT` | âœ… Yes |
+| `MERGED` | âœ… Yes |
+| `STAGE_1_ACTIVE` | âŒ No â€” active development |
+| `RED` | âŒ No â€” tests failing |
+| `FEATURE_GREEN` | âŒ No â€” not fully validated |
+| `REGRESSION_RED` | âŒ No â€” regression in progress |
+
+### Step 7.1: Check Current State
 
 ```bash
-# Navigate to where you cloned the template
-cd ~/agentic-workbench-engine
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app
+cat state.json
+```
 
-# Pull the latest changes
+Look for `"state": "INIT"` or `"state": "MERGED"`.
+
+### Step 7.2: Ensure Safe State
+
+**Wait for active work to complete:**
+```bash
+# Check for active sessions
+cat memory-bank/hot-context/session-checkpoint.md
+```
+
+If `status: ACTIVE`, wait for the session to finish.
+
+**Or reset to INIT (destructive):**
+```bash
+# Edit state.json, set:
+# "state": "INIT"
+# This abandons all in-progress work!
+```
+
+### Step 7.3: Update Local Engine
+
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine
 git pull origin main
-
-# Verify the version
 cat .workbench-version
 ```
 
-You should see the newer version number.
+Note the version (e.g., `2.2`).
 
-### Step 2.4: Run the upgrade command
-
-Now run the upgrade command from inside your project:
+### Step 7.4: Run Upgrade
 
 ```bash
-# Navigate to your project
-cd ~/projects/my-existing-workbench-app
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app
 
-# Run the upgrade (replace 2.1 with your target version)
-python workbench-cli.py upgrade --version 2.1
+# Run upgrade with target version
+python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py upgrade --version 2.2
 ```
 
-### Step 2.5: Understand the upgrade process
-
-When you run `upgrade`, the CLI performs these steps:
-
-1. **Safety Check** — Confirms `state.json` is in `INIT` or `MERGED`
-2. **Engine Overwrite** — Replaces these files with the new version:
+**What the upgrade does:**
+1. **Safety check** â€” Confirms state is INIT or MERGED
+2. **Engine overwrite** â€” Replaces:
    - `.clinerules`
    - `.roomodes`
-   - `.workbench/scripts/` (all Arbiter scripts)
-   - `.workbench/hooks/` (all Git hooks)
+   - `.workbench/scripts/` (Arbiter scripts)
+   - `.workbench/hooks/` (Git hooks)
    - `.roo-settings.json`
-3. **Memory Migration** — If the new version adds new memory-bank files, they are created. **Existing memory files are preserved.**
-4. **Version Bump** — Updates `.workbench-version` to the new version
-5. **Auto-Commit** — Creates a commit:
-   ```
-   chore(workbench): upgrade engine to v2.1
-   ```
+3. **Memory migration** â€” Creates new memory files if needed; existing memory preserved
+4. **Version bump** â€” Updates `.workbench-version`
+5. **Auto-commit** â€” `chore(workbench): upgrade engine to v2.2`
 
-### Step 2.6: Verify the upgrade succeeded
+### Step 7.5: Verify Upgrade
 
 ```bash
-# Check the new version
+# Check new version
 cat .workbench-version
 
-# Should output: 2.1 (or whatever version you upgraded to)
-```
+# View upgrade commit
+git log --oneline -n 3
 
-Check the git log to see the upgrade commit:
-```bash
-git log --oneline -n 5
-```
-
-You should see the upgrade commit at the top.
-
-### Step 2.7: Review the upgrade changes
-
-Before continuing work, review what changed:
-
-```bash
-# See what files changed
+# Review what changed
 git diff HEAD~1 --stat
-
-# See the actual changes
-git diff HEAD~1
 ```
 
-**Common changes you might see:**
-- New rules in `.clinerules`
-- New agent modes in `.roomodes`
-- New or updated Arbiter scripts
-- Updated `.roo-settings.json` (Roo Code permission changes)
-
-### Step 2.8: Update your local template periodically
-
-Whenever you want to upgrade, make sure your local template clone is up-to-date:
+### Step 7.6: Review Changes
 
 ```bash
-cd ~/agentic-workbench-engine
+# See detailed changes
+git diff HEAD~1
+
+# Check new rules
+cat .clinerules | head -50
+
+# Check new arbiter capabilities
+python .workbench/scripts/arbiter_check.py check-session
+```
+
+### Step 7.7: Continue Development
+
+After upgrade, the project is in `INIT` state. You can start new features.
+
+---
+
+## Part 8: Developing the Workbench Itself
+
+### When to Develop the Workbench
+
+You develop the workbench when you want to:
+- Fix a bug in the workbench
+- Add new functionality to the workbench
+- Improve existing arbiter scripts
+- Add new agent modes
+
+### Where Development Happens
+
+**`agentic-workbench-lab/`** â€” This repo
+
+This is where workbench improvements are developed and tested. The engine at `agentic-workbench-engine/` is the canonical template.
+
+### Development Workflow
+
+**1. Create a feature for the workbench:**
+
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
+
+# Use the workbench to develop itself!
+code .
+```
+
+**2. Use the standard pipeline:**
+
+The workbench uses itself to develop new versions. This is "bootstrapping."
+
+**3. Test changes:**
+
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
+
+# Run tests
+pytest tests/workbench/ -v
+
+# Run specific test file
+pytest tests/workbench/test_fac_compliance.py -v
+```
+
+**4. Commit changes:**
+
+```bash
+git add .
+git commit -m "feat(workbench): description
+
+Details about what changed
+"
+
+git push
+```
+
+**5. Update engine:**
+
+When `agentic-workbench-lab` changes are stable, update the engine:
+
+```bash
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine
+
+# Pull from lab
 git pull origin main
+
+# The engine is now updated with lab changes
+```
+
+### File Locations
+
+| File | Purpose |
+|------|---------|
+| `workbench-cli.py` | CLI bootstrapper |
+| `.workbench/scripts/arbiter_check.py` | Compliance checks |
+| `.workbench/scripts/audit_logger.py` | Session logging |
+| `.workbench/scripts/crash_recovery.py` | Crash recovery |
+| `.workbench/scripts/memory_rotator.py` | Memory management |
+| `.workbench/scripts/state_manager.py` | State transitions |
+| `.workbench/hooks/pre-commit` | Pre-commit validation |
+| `.workbench/hooks/pre-push` | Pre-push validation |
+| `.workbench/hooks/post-merge` | Post-merge actions |
+| `.workbench/hooks/post-tag` | Post-tagging actions |
+
+### Testing Workbench Changes
+
+```bash
+# Run all tests
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
+pytest tests/ -v --tb=short
+
+# Run with coverage
+pytest tests/ --cov=. --cov-report=term-missing
+
+# Run specific test class
+pytest tests/workbench/test_state_machine.py::TestStateMachine -v
+```
+
+### Committing Workbench Changes
+
+Follow the same commit conventions:
+
+```bash
+git commit -m "fix(workbench): correct state transition for REGRESSION_RED
+
+Fixed edge case where transition was blocked incorrectly.
+Added test coverage for the scenario.
+
+Refs: REQ-XXX"
 ```
 
 ---
@@ -361,96 +906,270 @@ git pull origin main
 
 ### "command not found: workbench-cli"
 
-The CLI is not in your PATH. See [Step 1.2](#step-12-add-the-cli-to-your-system-path).
+The CLI is not in PATH. Either:
+1. Use full path: `python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py`
+2. Or add to PATH in `.bashrc`: `export PATH="$PATH:$HOME/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine"`
 
-### "Error: state is not INIT or MERGED — upgrade blocked"
+### "Error: state is not INIT or MERGED â€” upgrade blocked"
 
-Your project is in an active development state. See [Step 2.2](#step-22-ensure-the-project-is-in-a-safe-state).
+The project is in an active state. Either:
+1. Wait for current work to complete
+2. Reset to INIT (destructive): Edit `state.json`, set `"state": "INIT"`
 
 ### "Error: Permission denied" during init
 
-The directory might already exist. Try a different project name or delete the existing directory:
+The target directory might already exist. Use a different name or remove the existing folder:
+
 ```bash
-rm -rf my-first-workbench-app
-python workbench-cli.py init my-first-workbench-app
+rm -rf my-first-app
+python .../workbench-cli.py init my-first-app
 ```
 
 ### "Error: git configuration missing"
 
-Set your Git name and email:
+Set Git name and email:
+
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
 ```
 
-### Roo Code isn't responding to `.clinerules`
+### Roo Code isn't responding to .clinerules
 
-Make sure `.clinerules` is in the **root** of your project (not in a subdirectory), and that you've opened that folder in VS Code.
+1. Ensure `.clinerules` is in the **project root** (not a subdirectory)
+2. Ensure you've opened the folder in VS Code (File â†’ Open Folder)
+3. Ensure Roo Code extension is installed and active
+4. Try re-importing settings: `Roo Code: Import Settings` â†’ select `.roo-settings.json`
+
+### SSH connection to Ubuntu fails
+
+1. Verify Tailscale is running on both machines: `tailscale status`
+2. Try the Tailscale IP address: `ssh nghia@100.64.1.2`
+3. Check SSH service on Ubuntu: `sudo systemctl status ssh`
+4. Check Ubuntu firewall: `sudo ufw status`
+
+### Symlink broken
+
+If a symlink shows as broken (red text in `ls -la`):
+
+```bash
+# Remove the broken symlink
+unlink ~/.roo-settings.json
+
+# Recreate the symlink
+ln -s ~/CONFIG-DOTFILES/.roo-settings.json ~/.roo-settings.json
+```
+
+### VS Code Remote SSH disconnects
+
+1. Check if Ubuntu is reachable: `ping <ubuntu-ip>`
+2. Check if SSH service is running: `sudo systemctl status ssh`
+3. Try reconnecting: `Ctrl+Shift+P` â†’ "Remote-SSH: Connect to Host"
+
+### Git push rejected
+
+Check if there's a pre-push hook blocking:
+
+```bash
+# Run the check manually
+python .workbench/scripts/arbiter_check.py check-session
+
+# Check for issues
+git status
+```
+
+The pre-push hook may block if:
+- `state.json` is staged by non-Arbiter
+- Tests are failing (REGRESSION_RED)
+- Feature is not in GREEN state
 
 ---
 
 ## Appendix B: Key Commands Reference
 
-The `workbench-cli.py` is the deterministic bootstrapper and state manager for the workbench.
+### Workbench CLI
 
-### Initialization & Upgrades
+```bash
+# Help
+python workbench-cli.py --help
 
-| Command | Purpose |
-|---------|---------|
-| `python workbench-cli.py init <project-name>` | Create a new project with workbench scaffold |
-| `python workbench-cli.py upgrade --version <vX.Y>` | Upgrade existing project to new workbench version |
-| `python workbench-cli.py install-hooks` | (Re)install Arbiter hooks into `.git/hooks/` |
-| `python workbench-cli.py register-arbiter` | Register all Arbiter script capabilities in `state.json` |
-| `python workbench-cli.py check` | Run Arbiter compliance health scan |
+# Version
+python workbench-cli.py --version
 
-### Feature Lifecycle
+# Initialize new project
+python workbench-cli.py init <project-path>
 
-| Command | Purpose |
-|---------|---------|
-| `python workbench-cli.py start-feature --req-id REQ-NNN` | Transition INIT/MERGED → STAGE_1_ACTIVE |
-| `python workbench-cli.py lock-requirements --req-id REQ-NNN` | Transition STAGE_1_ACTIVE → REQUIREMENTS_LOCKED |
-| `python workbench-cli.py set-red --req-id REQ-NNN` | Transition REQUIREMENTS_LOCKED → RED |
-| `python workbench-cli.py review-pending --req-id REQ-NNN` | Transition GREEN → REVIEW_PENDING |
-| `python workbench-cli.py merge --req-id REQ-NNN` | Mark feature as MERGED, close pipeline cycle |
+# Upgrade existing project
+python workbench-cli.py upgrade --version <vX.Y>
 
-### Operations
+# Check status
+python workbench-cli.py status
 
-| Command | Purpose |
-|---------|---------|
-| `python workbench-cli.py status` | Display `state.json` in human-readable format |
-| `python workbench-cli.py rotate` | Trigger memory rotator for sprint end |
+# Run compliance scan
+python workbench-cli.py check
+
+# Install hooks
+python workbench-cli.py install-hooks
+
+# Register arbiter
+python workbench-cli.py register-arbiter
+
+# Rotate memory
+python workbench-cli.py rotate
+```
+
+### Feature Lifecycle Commands
+
+```bash
+# Start a new feature
+python workbench-cli.py start-feature --req-id REQ-001
+
+# Lock requirements
+python workbench-cli.py lock-requirements --req-id REQ-001
+
+# Set RED state
+python workbench-cli.py set-red --req-id REQ-001
+
+# Review pending
+python workbench-cli.py review-pending --req-id REQ-001
+
+# Merge feature
+python workbench-cli.py merge --req-id REQ-001
+```
+
+### Git Commands
+
+```bash
+# Check status
+git status
+
+# Stage files
+git add <file1> <file2>
+
+# Commit
+git commit -m "feat(REQ-001): description"
+
+# Push
+git push
+
+# Pull latest
+git pull
+
+# View recent commits
+git log --oneline -n 5
+
+# View changes since last commit
+git diff HEAD
+```
 
 ---
 
 ## Appendix C: Understanding the State Machine
 
-Your project's progress is tracked in `state.json.state`. Here's what each state means:
+### State Overview
+
+```
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                      INIT (Fresh Start)                       â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                   STAGE_1_ACTIVE (Architect)                   â”‚
+        â”‚              Writing feature files (.feature)                  â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                  REQUIREMENTS_LOCKED                          â”‚
+        â”‚              Feature files approved, waiting for tests        â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                         RED                                  â”‚
+        â”‚              Tests written but failing (expected)            â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                     FEATURE_GREEN                             â”‚
+        â”‚           Current feature's tests pass (Phase 1)            â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚               REGRESSION_RED (Something broke)                â”‚
+        â”‚              Full test suite reveals regression              â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â–¼ (if fixed)
+                                    â”‚
+                                    â–¼ (if clean)
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                         GREEN                                 â”‚
+        â”‚      Phase 1 + Phase 2 (full regression) both pass          â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                    INTEGRATION_CHECK                          â”‚
+        â”‚                 Running integration tests                     â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                         â–¼                      â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚      INTEGRATION_RED      â”‚  â”‚      REVIEW_PENDING       â”‚
+        â”‚  Integration tests fail   â”‚  â”‚   Awaiting human review   â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                         â”‚                      â”‚
+                         â–¼                      â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚        GREEN             â”‚  â”‚         MERGED            â”‚
+        â”‚ (after fixing)           â”‚  â”‚    Feature complete!      â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+### State Definitions
 
 | State | Meaning |
 |-------|---------|
 | `INIT` | Fresh start, no active feature |
 | `STAGE_1_ACTIVE` | Architect is writing feature files |
 | `REQUIREMENTS_LOCKED` | Feature files approved, waiting for tests |
-| `DEPENDENCY_BLOCKED` | Waiting for a dependent feature to reach `MERGED` |
 | `RED` | Tests are failing (expected initially) |
-| `FEATURE_GREEN` | Current feature's unit tests pass (Phase 1 only — full regression not yet run) |
-| `REGRESSION_RED` | A regression was introduced (other tests fail) |
+| `FEATURE_GREEN` | Current feature's unit tests pass (Phase 1 only) |
+| `REGRESSION_RED` | A regression was introduced |
 | `GREEN` | Phase 1 + Phase 2 (full regression) both pass |
 | `INTEGRATION_CHECK` | Running integration tests |
 | `INTEGRATION_RED` | Integration tests failing |
 | `REVIEW_PENDING` | Awaiting human review |
 | `MERGED` | Feature successfully merged |
-| `PIVOT_IN_PROGRESS` | Mid-feature change in progress |
+| `DEPENDENCY_BLOCKED` | Waiting for a dependent feature to merge |
+| `PIVOT_IN_PROGRESS` | Mid-feature requirements change |
 | `PIVOT_APPROVED` | Pivot approved, re-running tests |
 | `UPGRADE_IN_PROGRESS` | Engine upgrade in progress |
 
+### Special States
+
+| State | Trigger | Exit Condition |
+|-------|---------|----------------|
+| `DEPENDENCY_BLOCKED` | Dependent feature not merged | All dependencies merged |
+| `PIVOT_IN_PROGRESS` | Delta prompt during active development | Human approves pivot |
+| `PIVOT_APPROVED` | Pivot approved | Tests re-run, returns to RED |
+| `UPGRADE_IN_PROGRESS` | Upgrade command run | Upgrade completes |
+
 ---
 
-## Appendix D: Getting Help
+## Getting Help
 
-If you're stuck:
-
-1. **Read the spec:** `Agentic Workbench v2 - Draft.md` — comprehensive architectural documentation
-2. **Check decision log:** `memory-bank/hot-context/decisionLog.md` — architectural decisions
+1. **Read the spec:** `Agentic Workbench v2 - Draft.md` â€” comprehensive architectural documentation
+2. **Check decision log:** `memory-bank/hot-context/decisionLog.md` â€” architectural decisions
 3. **Ask Roo Code:** Use Roo Chat to ask questions about the workbench
-4. **Review the template:** Browse `~/agentic-workbench-engine` for examples
+4. **Review the engine:** Browse `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine`
+5. **Review tests:** Browse `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/tests/workbench`
+
+---
+
+*End of Beginner's Guide*
