@@ -58,6 +58,17 @@
 
 ---
 
+## ADR-006: Submodule Restoration
+
+- **Date:** 2026-04-17
+- **Context:** On 2026-04-17, the submodule was removed in favor of standalone clone (Option A). After further consideration, the user wants to restore the submodule pattern for better version pinning and alignment with ADR-005.
+- **Decision:** Add `agentic-workbench-engine` as a git submodule at `agentic-workbench-engine/`.
+- **Original pinned commit:** 54b4d0a (fix(memory_rotator): move narrativeRequest.md from rotate to persist policy)
+- **URL:** git@github.com:nghiaphan31/agentic-workbench-engine.git
+- **Consequences:** Engine changes now require two-step commit: one in engine repo, one to update submodule pointer in lab repo.
+
+---
+
 ## Adding New ADRs
 
 When a significant architectural decision is made:
