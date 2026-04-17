@@ -348,11 +348,14 @@ python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py 
    {
      "state": "INIT",
      "arbiter_capabilities": {
-       "git_commit": false,
-       "git_push": false,
-       "test_run": false,
-       "test_phase2": false,
-       "integration_run": false
+       "test_orchestrator": false,
+       "gherkin_validator": false,
+       "memory_rotator": false,
+       "audit_logger": false,
+       "crash_recovery": false,
+       "dependency_monitor": false,
+       "integration_test_runner": false,
+       "git_hooks": false
      }
    }
    ```
@@ -994,7 +997,7 @@ The pre-push hook may block if:
 python workbench-cli.py --help
 
 # Version
-python workbench-cli.py --version
+python workbench-cli.py --cli-version
 
 # Initialize new project
 python workbench-cli.py init <project-path>
