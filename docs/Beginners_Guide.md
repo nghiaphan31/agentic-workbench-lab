@@ -43,8 +43,8 @@ The Agentic Workbench is designed for a **two-machine setup**:
 
 ```
 AGENTIC_DEVELOPMENT_PROJECTS/
-├── agentic-workbench-engine/    # Canonical engine (cloned from GitHub)
-├── agentic-workbench-lab/        # This repo (workbench development)
+└── agentic-workbench-lab/        # Main repo with engine as submodule
+    └── agentic-workbench-engine/ # Canonical engine (git submodule)
 ├── APPLICATION-PROJECTS/         # Your application projects
 │   ├── my-app-1/
 │   └── my-app-2/
@@ -219,27 +219,27 @@ cd ~
 mkdir -p AGENTIC_DEVELOPMENT_PROJECTS
 cd AGENTIC_DEVELOPMENT_PROJECTS
 
-# Clone the engine (canonical template)
-git clone https://github.com/nghiaphan31/agentic-workbench-engine.git
-
-# Clone this repo (workbench lab for development)
+# Clone the workbench lab repo (engine is included as a git submodule)
 git clone https://github.com/nghiaphan31/agentic-workbench-lab.git
 
+# Initialize and update the engine submodule
+cd agentic-workbench-lab
+git submodule update --init --recursive
+
 # Create application projects folder (empty for now)
-mkdir APPLICATION-PROJECTS
-mkdir archive
+mkdir ../APPLICATION-PROJECTS
+mkdir ../archive
 
 # Verify the structure
-ls -la AGENTIC_DEVELOPMENT_PROJECTS/
+ls -la
 ```
 
 Expected output:
 ```
 AGENTIC_DEVELOPMENT_PROJECTS/
-├── agentic-workbench-engine/
-├── agentic-workbench-lab/
-├── APPLICATION-PROJECTS/
-└── archive/
+└── agentic-workbench-lab/        # Main repo
+    └── agentic-workbench-engine/ # Submodule (auto-initialized)
+    └── ... (other workbench files)
 ```
 
 ### Step 2.8: Sync dotfiles on Ubuntu
@@ -279,7 +279,7 @@ On **Ubuntu Server**, open VS Code (`code .`) and verify:
 
 Test the CLI:
 ```bash
-cd AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine
+cd AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine
 python workbench-cli.py --version
 ```
 
@@ -314,7 +314,7 @@ The workbench CLI bootstraps the project scaffold:
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-first-app
 
 # Run init with full path to the engine
-python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py init .
+python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine/workbench-cli.py init .
 ```
 
 **What happens during init:**
@@ -498,15 +498,17 @@ ln -s ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES/.roo-settings.json ~/.roo-s
 **Solution:**
 ```bash
 # Before going offline, ensure all repos are up-to-date
-cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git pull
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab && git pull
+git submodule update --recursive
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app && git pull
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES && git pull
 
 # Work normally - all files are local
 # When back online:
-cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git push
-# ... repeat for all repos
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
+git push
+git submodule update --recursive
+# Submodule changes are pushed with the parent repo
 ```
 
 ### Scenario B: Browser Only (Professional PC)
@@ -673,8 +675,9 @@ Refs: REQ-042"
 
 **Before starting work on any machine:**
 ```bash
-cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine && git pull
-cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab && git pull
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
+git pull
+git submodule update --recursive
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app && git pull
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/CONFIG-DOTFILES && git pull
 ```
@@ -733,8 +736,9 @@ If `status: ACTIVE`, wait for the session to finish.
 ### Step 7.3: Update Local Engine
 
 ```bash
-cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine
-git pull origin main
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab
+git fetch origin
+git log --oneline origin/main -3
 cat .workbench-version
 ```
 
@@ -746,7 +750,7 @@ Note the version (e.g., `2.2`).
 cd ~/AGENTIC_DEVELOPMENT_PROJECTS/APPLICATION-PROJECTS/my-app
 
 # Run upgrade with target version
-python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py upgrade --version 2.2
+python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine/workbench-cli.py upgrade --version 2.2
 ```
 
 **What the upgrade does:**
@@ -807,7 +811,7 @@ You develop the workbench when you want to:
 
 **`agentic-workbench-lab/`** — This repo
 
-This is where workbench improvements are developed and tested. The engine at `agentic-workbench-engine/` is the canonical template.
+This is where workbench improvements are developed and tested. The engine at `agentic-workbench-engine/` is the canonical template, included as a git submodule.
 
 ### Development Workflow
 
@@ -853,9 +857,9 @@ git push
 When `agentic-workbench-lab` changes are stable, update the engine:
 
 ```bash
-cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine
+cd ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine
 
-# Pull from lab
+# Pull from engine origin
 git pull origin main
 
 # The engine is now updated with lab changes
@@ -910,8 +914,8 @@ Refs: REQ-XXX"
 ### "command not found: workbench-cli"
 
 The CLI is not in PATH. Either:
-1. Use full path: `python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine/workbench-cli.py`
-2. Or add to PATH in `.bashrc`: `export PATH="$PATH:$HOME/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine"`
+1. Use full path: `python ~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine/workbench-cli.py`
+2. Or add to PATH in `.bashrc`: `export PATH="$PATH:$HOME/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine"`
 
 ### "Error: state is not INIT or MERGED — upgrade blocked"
 
@@ -1169,7 +1173,7 @@ git diff HEAD
 1. **Read the spec:** `Agentic Workbench v2 - Draft.md` — comprehensive architectural documentation
 2. **Check decision log:** `memory-bank/hot-context/decisionLog.md` — architectural decisions
 3. **Ask Roo Code:** Use Roo Chat to ask questions about the workbench
-4. **Review the engine:** Browse `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-engine`
+4. **Review the engine:** Browse `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/agentic-workbench-engine`
 5. **Review tests:** Browse `~/AGENTIC_DEVELOPMENT_PROJECTS/agentic-workbench-lab/tests/workbench`
 
 ---
