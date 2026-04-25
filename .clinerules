@@ -128,9 +128,9 @@ The agent MUST NOT:
 - Commit without a Conventional Commits-compliant message
 - Commit changes to `state.json` directly (only the Arbiter writes to `state.json`)
 
-> **Rule CMT-1:** All **feature commits** MUST be made on a `feature/` or `lab/` branch. Direct commits to `main` or `develop` are physically blocked by the `pre-commit` and `pre-push` Git hooks.
+> **Rule CMT-1:** All **feature commits** MUST be made on a `feature/` or `lab/` branch. Direct pushes to `main`, `master`, or `develop` are physically blocked by the `pre-push` Git hook.
 >
-> **Trivial chore commits** (e.g., documentation fixes, config updates) MAY commit directly to `develop` if approved by human.
+> **APPROVED-BY-HUMAN Exception:** Trivial chore commits (e.g., documentation fixes, config updates) MAY be pushed directly to `develop` if the commit message contains `APPROVED-BY-HUMAN`. This exception does NOT apply to `main` or `master`.
 >
 > **Bootstrap Exception:** `workbench-cli.py init` and `workbench-cli.py upgrade` are permitted to commit directly to `main` as bootstrapping operations when initializing NEW repos or performing version upgrades.
 
