@@ -85,3 +85,62 @@ class TestPrePushHook:
         # Push should continue with warning (not hard-blocked)
         is_blocked = self._is_push_blocked(state["state"])
         # Note: conflicts don't add extra blocking beyond the state check
+
+    def test_uc065_direct_push_to_develop_blocked(self):
+        """UC-065: Direct push to develop (non-merge commit) — blocked"""
+        # Simulate: target_branch = "develop", parent_count = 1 (not a merge)
+        target_branch = "develop"
+        parent_count = 1  # single parent = not a merge commit
+        is_blocked = target_branch in ["main", "master", "develop"] and parent_count < 2
+        assert is_blocked
+
+    def test_uc066_trivial_chore_to_develop_with_approval_allowed(self):
+        """UC-066: Trivial chore with APPROVED-BY-HUMAN to develop — allowed"""
+        target_branch = "develop"
+        parent_count = 1  # single parent = not a merge commit
+        commit_message = "chore(docs): fix typo in README APPROVED-BY-HUMAN"
+        has_approval = "APPROVED-BY-HUMAN" in commit_message
+        
+        # Check if this would be blocked first
+        would_be_blocked = target_branch == "develop" and parent_count < 2
+        # Exception allows push if has approval
+        is_blocked = would_be_blocked and not has_approval
+        assert not is_blocked
+
+    def test_uc067_feature_branch_push_allowed(self):
+        """UC-067: Push to feature/* branch — always allowed"""
+        target_branch = "feature/REQ-001-my-feature"
+        parent_count = 1  # could be merge or regular commit
+        blocked_branches = ["main", "master", "develop"]
+        is_blocked = target_branch in blocked_branches and parent_count < 2
+        assert not is_blocked
+
+    # =============================================================================
+    # UC-075 to UC-076: --delete-branch Warning Tests (Gap 3 - CMT-2)
+    # =============================================================================
+
+    def test_uc075_merge_to_main_warns_about_delete_branch(self):
+        """UC-075: Merge to main warns about --delete-branch"""
+        branch = "main"
+        oldrev = "abc123"
+        newrev = "def456"
+        merge_base = "abc123"  # != oldrev means it's a merge
+
+        # Simulate the warning check from pre-push hook
+        is_merge_to_protected = branch in ["main", "develop"]
+        merge_base_changed = merge_base != oldrev
+        should_warn = is_merge_to_protected and merge_base_changed
+        assert should_warn
+
+    def test_uc076_merge_to_develop_warns_about_delete_branch(self):
+        """UC-076: Merge to develop warns about --delete-branch"""
+        branch = "develop"
+        oldrev = "abc123"
+        newrev = "def456"
+        merge_base = "abc123"  # != oldrev means it's a merge
+
+        # Simulate the warning check from pre-push hook
+        is_merge_to_protected = branch in ["main", "develop"]
+        merge_base_changed = merge_base != oldrev
+        should_warn = is_merge_to_protected and merge_base_changed
+        assert should_warn

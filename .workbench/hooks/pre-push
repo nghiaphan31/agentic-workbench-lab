@@ -46,6 +46,20 @@ if [ -f "state.json" ]; then
 fi
 
 # =============================================================================
+# 1b. CHECK FOR DELETED SOURCE BRANCH IN MERGE COMMITS (CMT-2)
+# =============================================================================
+# git merge --delete-branch removes the source branch after merge — this is forbidden
+# Detect if this push contains a merge to main/develop and warn the user
+if [ "$branch" = "main" ] || [ "$branch" = "develop" ]; then
+    merge_base=$(git merge-base "$oldrev" "$newrev" 2>/dev/null || echo "")
+    if [ -n "$merge_base" ] && [ "$merge_base" != "$oldrev" ]; then
+        echo "[PRE-PUSH] ${YELLOW}WARNING: Merge detected to $branch${NC}"
+        echo "  Ensure --delete-branch was NOT used when creating this merge."
+        echo "  Use: git merge --no-delete-branch (CMT-2)"
+    fi
+fi
+
+# =============================================================================
 # 2. CHECK FOR DIRECT PUSH TO MAIN (non-merge commits only)
 # =============================================================================
 # Get the remote and branch being pushed
