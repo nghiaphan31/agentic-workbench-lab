@@ -29,3 +29,15 @@ Submodule restoration completed. Engine is now a git submodule inside `agentic-w
 ## Coherence Review
 
 In progress - checking all documentation and code for consistency with submodule pattern. See todo list for files being reviewed.
+
+## ⚠️ Pending Human Actions
+
+<!-- Auto-populated by gate_notification.py during check-session startup -->
+<!-- DO NOT edit manually — this section is managed by the Arbiter -->
+
+| REQ-ID | Gate | Feature | Blocking Since | Action Required |
+|--------|------|---------|----------------|-----------------|
+| _(empty)_ | — | No pending gates | — | — |
+
+<!-- Format: REQ-ID | Gate | Feature name | ISO timestamp | Human action description -->
+<!-- Example row: REQ-001 | HITL 2 | codebase-memory-mcp | 2026-04-25T19:45 | Approve PR merge -->

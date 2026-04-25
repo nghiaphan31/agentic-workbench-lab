@@ -119,14 +119,14 @@ class TestArbiterCheckFunctions:
             "state": state,
         }
 
-    def test_gap15u_check_registry_has_13_rules(self):
-        """GAP-15u: CHECK_REGISTRY contains 15 rules."""
-        assert len(CHECK_REGISTRY) == 15, f"Expected 15 rules, got {len(CHECK_REGISTRY)}"
+    def test_gap15u_check_registry_has_16_rules(self):
+        """GAP-15u: CHECK_REGISTRY contains 16 rules (including GATEKEEPER)."""
+        assert len(CHECK_REGISTRY) == 16, f"Expected 16 rules, got {len(CHECK_REGISTRY)}"
 
-    def test_gap15u_session_checks_contains_5_critical_rules(self):
-        """GAP-15u: SESSION_CHECKS contains exactly 7 rules for lightweight scan."""
-        assert len(SESSION_CHECKS) == 7, f"Expected 7 session checks, got {len(SESSION_CHECKS)}"
-        expected_session = {"SLC-2", "MEM-1", "MEM-3a", "DEP-3", "FAC-1", "CR-1", "HOOK-INSTALL"}
+    def test_gap15u_session_checks_contains_8_critical_rules(self):
+        """GAP-15u: SESSION_CHECKS contains exactly 8 rules for lightweight scan (GATEKEEPER added)."""
+        assert len(SESSION_CHECKS) == 8, f"Expected 8 session checks, got {len(SESSION_CHECKS)}"
+        expected_session = {"SLC-2", "MEM-1", "MEM-3a", "DEP-3", "FAC-1", "CR-1", "HOOK-INSTALL", "GATEKEEPER"}
         assert set(SESSION_CHECKS) == expected_session
 
     def test_gap15u_check_startup_protocol_active_context_missing(
