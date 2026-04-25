@@ -28,9 +28,14 @@ tag_name="$3"
 echo "[POST-TAG] Tag detected: $tag_name"
 
 # =============================================================================
-# 1. DETECT VERSION TAG
+# 1. DETECT VERSION TAG (GAP-11 FIX: Expanded regex)
 # =============================================================================
-if echo "$tag_name" | grep -qE '^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+)?$'; then
+# GAP-11 FIX: Expanded regex to support:
+#   - Capital V prefix (V1.0.0)
+#   - No-prefix tags (1.0.0)
+#   - SemVer build metadata (+build123)
+#   - Common pre-release formats (-rc1, -beta, -alpha)
+if echo "$tag_name" | grep -qE '^([vV])?([0-9]+)\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+)?(\+[a-zA-Z0-9]+)?$'; then
     echo "[POST-TAG] ${GREEN}Version tag detected: $tag_name${NC}"
     echo "  Initiating compliance snapshot process..."
     

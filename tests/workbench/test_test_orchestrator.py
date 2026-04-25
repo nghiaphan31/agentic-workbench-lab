@@ -69,3 +69,54 @@ class TestTestOrchestrator:
         exit_code, stdout, stderr = run_script("test_orchestrator", "run", "--scope", "full")
         assert exit_code == 2
         assert "state.json not found" in stderr or "state.json not found" in stdout
+
+    # =============================================================================
+    # GAP-6: Regression failures population tests
+    # =============================================================================
+
+    def test_gap6_regression_failures_populated_on_test_failure(self, temp_workbench, state_factory, run_script, mock_runner_fail):
+        """
+        GAP-6: When tests fail, regression_failures array is populated with actual failure details.
+        
+        Verify that when Phase 2 full regression tests fail, the state.json
+        regression_failures array contains the actual failure details, not just an empty array.
+        """
+        state_factory(state="FEATURE_GREEN", active_req_id="REQ-001")
+        (temp_workbench / "tests" / "unit" / "REQ-001-user-login.spec.ts").write_text(
+            "describe('test', () => { it('fail', () => { expect(true).toBe(false); }); });",
+            encoding="utf-8"
+        )
+        exit_code, stdout, stderr = run_script("test_orchestrator", "run", "--scope", "full", "--set-state")
+        
+        # Test should fail
+        assert exit_code == 1
+        
+        state = read_state(temp_workbench)
+        
+        # regression_failures should be populated with failure details
+        assert "regression_failures" in state, "state.json should have regression_failures field"
+        assert isinstance(state["regression_failures"], list), "regression_failures should be an array"
+        assert len(state["regression_failures"]) > 0, "regression_failures should not be empty when tests fail"
+
+    def test_gap6_regression_failures_empty_on_success(self, temp_workbench, state_factory, run_script, mock_runner_pass):
+        """
+        GAP-6: When tests pass, regression_failures array remains empty.
+        
+        Verify that when Phase 2 full regression tests pass, the state.json
+        regression_failures array remains empty.
+        """
+        state_factory(state="FEATURE_GREEN", active_req_id="REQ-001")
+        (temp_workbench / "tests" / "unit" / "REQ-001-user-login.spec.ts").write_text(
+            "describe('test', () => { it('pass', () => { expect(true).toBe(true); }); });",
+            encoding="utf-8"
+        )
+        exit_code, stdout, stderr = run_script("test_orchestrator", "run", "--scope", "full", "--set-state")
+        
+        # Test should pass
+        assert exit_code == 0
+        
+        state = read_state(temp_workbench)
+        
+        # regression_failures should remain empty when tests pass
+        assert "regression_failures" in state
+        assert state["regression_failures"] == [], "regression_failures should be empty when tests pass"

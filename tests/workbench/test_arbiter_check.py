@@ -36,6 +36,7 @@ from arbiter_check import (
     check_regression_failures_populated,
     check_arbiter_capabilities_registered,
     check_forbidden_self_declaration,
+    check_hooks_installed,
     run_checks,
     SESSION_CHECKS,
     CHECK_REGISTRY,
@@ -119,13 +120,13 @@ class TestArbiterCheckFunctions:
         }
 
     def test_gap15u_check_registry_has_13_rules(self):
-        """GAP-15u: CHECK_REGISTRY contains 13 rules."""
-        assert len(CHECK_REGISTRY) == 14, f"Expected 14 rules, got {len(CHECK_REGISTRY)}"
+        """GAP-15u: CHECK_REGISTRY contains 15 rules."""
+        assert len(CHECK_REGISTRY) == 15, f"Expected 15 rules, got {len(CHECK_REGISTRY)}"
 
     def test_gap15u_session_checks_contains_5_critical_rules(self):
-        """GAP-15u: SESSION_CHECKS contains exactly 5 rules for lightweight scan."""
-        assert len(SESSION_CHECKS) == 6, f"Expected 6 session checks, got {len(SESSION_CHECKS)}"
-        expected_session = {"SLC-2", "MEM-1", "MEM-3a", "DEP-3", "FAC-1", "CR-1"}
+        """GAP-15u: SESSION_CHECKS contains exactly 7 rules for lightweight scan."""
+        assert len(SESSION_CHECKS) == 7, f"Expected 7 session checks, got {len(SESSION_CHECKS)}"
+        expected_session = {"SLC-2", "MEM-1", "MEM-3a", "DEP-3", "FAC-1", "CR-1", "HOOK-INSTALL"}
         assert set(SESSION_CHECKS) == expected_session
 
     def test_gap15u_check_startup_protocol_active_context_missing(
@@ -273,3 +274,67 @@ class TestArbiterCheckFunctions:
         assert isinstance(results, list)
         assert len(results) == 2
         assert all(isinstance(r, CheckResult) for r in results)
+
+    # =============================================================================
+    # GAP-5: Hook installation verification tests
+    # =============================================================================
+
+    def test_gap5_hooks_missing_returns_critical(self, mock_repo, monkeypatch):
+        """
+        GAP-5: check_hooks_installed() returns CRITICAL when hooks are missing.
+        
+        When .git/hooks/pre-commit and other required hooks do not exist,
+        the check should return CRITICAL status.
+        """
+        # Set up mock .git directory without hooks
+        git_dir = mock_repo["root"] / ".git"
+        git_dir.mkdir(parents=True, exist_ok=True)
+        
+        hooks_dir = git_dir / "hooks"
+        # Ensure hooks directory is empty or doesn't have required hooks
+        if hooks_dir.exists():
+            for hook_file in hooks_dir.glob("*"):
+                hook_file.unlink()
+        
+        # Mock run_git to return our mock git dir
+        def mock_run_git(*args, **kwargs):
+            return (str(git_dir), 0)
+        monkeypatch.setattr(arbiter_check, "run_git", mock_run_git)
+        
+        result = check_hooks_installed()
+        
+        assert result.status == "CRITICAL", "Should return CRITICAL when hooks are missing"
+        assert "HOOK-INSTALL" in result.rule, "Rule should be HOOK-INSTALL"
+
+    def test_gap5_hooks_present_returns_ok(self, mock_repo, monkeypatch):
+        """
+        GAP-5: check_hooks_installed() returns OK when hooks are properly installed.
+        
+        When .git/hooks/pre-commit and other required hooks exist and match
+        the source hooks, the check should return OK status.
+        """
+        # Set up mock .git directory with hooks
+        git_dir = mock_repo["root"] / ".git"
+        git_dir.mkdir(parents=True, exist_ok=True)
+        
+        hooks_dir = git_dir / "hooks"
+        hooks_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create required hooks
+        hooks_source = mock_repo["root"] / ".workbench" / "hooks"
+        hooks_source.mkdir(parents=True, exist_ok=True)
+        
+        required_hooks = ["pre-commit", "pre-push", "post-merge", "post-tag"]
+        for hook_name in required_hooks:
+            # Create source hook
+            (hooks_source / hook_name).write_text(f"#!/bin/bash\necho 'hook'", encoding="utf-8")
+            # Create installed hook (copy from source)
+            (hooks_dir / hook_name).write_text(f"#!/bin/bash\necho 'hook'", encoding="utf-8")
+        
+        def mock_run_git(*args, **kwargs):
+            return (str(git_dir), 0)
+        monkeypatch.setattr(arbiter_check, "run_git", mock_run_git)
+        
+        result = check_hooks_installed()
+        
+        assert result.status == "OK", "Should return OK when hooks are properly installed"
