@@ -1,0 +1,123 @@
+#!/bin/sh
+# pre-push hook — The Arbiter's Push Gate
+#
+# Owner: The Arbiter (Layer 2b)
+# Version: 2.1
+# Location: .workbench/hooks/pre-push
+#
+# This hook runs BEFORE any git push is completed.
+# It enforces:
+#   1. Blocking states: RED, REGRESSION_RED, INTEGRATION_RED, PIVOT_IN_PROGRESS
+#   2. Direct push to main is blocked (merges only)
+#
+# Exit codes:
+#   0 = push allowed
+#   1 = push blocked
+
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo "[PRE-PUSH] Running Arbiter push gate checks..."
+
+# =============================================================================
+# 1. CHECK FOR BLOCKING STATES
+# =============================================================================
+BLOCKING_STATES="RED REGRESSION_RED INTEGRATION_RED PIVOT_IN_PROGRESS"
+
+if [ -f "state.json" ]; then
+    CURRENT_STATE=$(python -c "import json; s=json.load(open('state.json')); print(s.get('state',''))" 2>/dev/null || echo "UNKNOWN")
+    
+    for blocking_state in $BLOCKING_STATES; do
+        if [ "$CURRENT_STATE" = "$blocking_state" ]; then
+            echo "[PRE-PUSH] ${RED}BLOCKED: Cannot push while state is $blocking_state${NC}"
+            echo "  Current state: $CURRENT_STATE"
+            echo "  Complete the current pipeline stage before pushing."
+            echo "  Run: python .workbench/scripts/test_orchestrator.py run --scope full --set-state"
+            exit 1
+        fi
+    done
+fi
+
+# =============================================================================
+# 2. CHECK FOR DIRECT PUSH TO MAIN (non-merge commits only)
+# =============================================================================
+# Get the remote and branch being pushed
+remote="$1"
+url="$2"
+
+# Get the list of commits being pushed
+z40='0000000000000000000000000000000000000000'
+
+while IFS= read -r oldrev newrev refname; do
+    branch=$(echo "$refname" | sed 's|refs/heads/||')
+    
+    # Skip tag pushes
+    if [ "$branch" = "" ]; then
+        continue
+    fi
+    
+    # Check if this is a direct push to main/develop (not a merge)
+    BLOCKED_BRANCHES="main master develop"
+    if echo "$BLOCKED_BRANCHES" | grep -w "$branch" > /dev/null; then
+        # Check if this is a fast-forward push or a force push
+        # A merge commit would have two parents
+        if [ "$oldrev" != "$z40" ]; then
+            # Not a new branch - check if it's a merge
+            parent_count=$(git rev-list --parents --count "$newrev" ^"$oldrev" 2>/dev/null | tr -d ' ')
+            if [ "$parent_count" -lt 2 ]; then
+                # Not a merge commit - check for APPROVED-BY-HUMAN exception
+                if [ "$branch" = "develop" ]; then
+                    # Check if trivial chore commit with human approval
+                    commit_message=$(git log -1 --format="%s" "$newrev" 2>/dev/null || echo "")
+                    if echo "$commit_message" | grep -i "APPROVED-BY-HUMAN" > /dev/null; then
+                        echo "[PRE-PUSH] ${YELLOW}WARNING: Approved trivial chore to develop${NC}"
+                        echo "  Branch: $branch"
+                        echo "  Commit: $commit_message"
+                        echo "  Push allowed with human approval."
+                    else
+                        echo "[PRE-PUSH] ${RED}BLOCKED: Direct push to $branch is not allowed${NC}"
+                        echo "  Branch: $branch"
+                        echo "  Only merge commits via PR are allowed for $branch."
+                        echo "  For trivial chores to develop, add 'APPROVED-BY-HUMAN' to commit message."
+                        echo "  Push to a feature branch and create a Pull Request instead."
+                        exit 1
+                    fi
+                else
+                    # main/master - no exception
+                    echo "[PRE-PUSH] ${RED}BLOCKED: Direct push to $branch is not allowed${NC}"
+                    echo "  Branch: $branch"
+                    echo "  Only merge commits via PR are allowed for $branch."
+                    echo "  Push to a feature branch and create a Pull Request instead."
+                    exit 1
+                fi
+            fi
+        fi
+    fi
+done
+
+# =============================================================================
+# 3. CHECK REGRESSION STATE
+# =============================================================================
+if [ -f "state.json" ]; then
+    REGRESSION_STATE=$(python -c "import json; s=json.load(open('state.json')); print(s.get('regression_state',''))" 2>/dev/null || echo "UNKNOWN")
+    if [ "$REGRESSION_STATE" = "REGRESSION_RED" ]; then
+        echo "[PRE-PUSH] ${RED}BLOCKED: Regression detected${NC}"
+        echo "  regression_state: $REGRESSION_STATE"
+        echo "  Fix regressions before pushing."
+        echo "  Run: python .workbench/scripts/test_orchestrator.py run --scope full --set-state"
+        exit 1
+    fi
+fi
+
+# =============================================================================
+# ALL CHECKS PASSED
+# =============================================================================
+echo "[PRE-PUSH] ${GREEN}All push gate checks passed — push allowed${NC}"
+exit 0
