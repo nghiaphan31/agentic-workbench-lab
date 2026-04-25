@@ -131,6 +131,12 @@ stateDiagram-v2
     UPGRADE_IN_PROGRESS --> INIT : Arbiter completes engine overwrite\nAuto-commits upgrade\nchore-workbench-upgrade-vX.Y
 ```
 
+> **Note on state.json Field Separation:**
+> `state.json` contains three distinct fields:
+> - `state`: main state machine (RED, FEATURE_GREEN, GREEN, etc.)
+> - `regression_state`: separate field (CLEAN | REGRESSION_RED)
+> - `integration_state`: separate field (CHECK | GREEN | RED)
+
 ---
 
 ## Diagram 19 — Memory Rotation Policy at Cycle End
@@ -162,9 +168,9 @@ flowchart TD
     end
 
     subgraph PERSIST_POLICY["PERSIST — Never Rotated"]
-        DL -->|PERSIST| P1[Stays in hot-context/\nAccumulates across sprints\nADRs are permanent records]
-        SP -->|PERSIST| P2[Stays in hot-context/\nAccumulates across sprints\nConventions are long-lived]
-        RL -->|PERSIST| P3[Stays in hot-context/\nAccumulates across sprints\nSingle source of truth for releases]
+        DL -->|PERSIST| P1[Stays in hot-context/\nAccumulates across development cycles\nADRs are permanent records]
+        SP -->|PERSIST| P2[Stays in hot-context/\nAccumulates across development cycles\nConventions are long-lived]
+        RL -->|PERSIST| P3[Stays in hot-context/\nAccumulates across development cycles\nSingle source of truth for releases]
     end
 
     subgraph RESET_POLICY["RESET — Overwrite to Empty Template, Not Archived"]

@@ -33,7 +33,7 @@ graph TB
         AR1[State Manager\nReads/writes state.json deterministically]
         AR2[Test Orchestrator\nRuns test suites deterministically]
         AR3[Gherkin Validator\nSyntax and REQ-ID checks]
-        AR4[Memory Rotator\nSprint-end file rotation]
+        AR4[Memory Rotator\ndevelopment cycle-end file rotation]
         AR5[Audit Trail Logger\nImmutable session metadata]
         AR6[Crash Recovery Daemon\nHeartbeat every 5 min]
         AR7[Integration Test Runner\nRuns integration suite gate]
@@ -151,15 +151,23 @@ graph TB
         ITR[integration_test_runner.py\nIntegration gate - FLOW-NNN]
         DM[dependency_monitor.py\nAuto-unblocks DEPENDENCY_BLOCKED]
         GV[gherkin_validator.py\nSyntax gate - REQ-ID and @depends-on]
-        MR[memory_rotator.py\nSprint-end rotation]
+        MR[memory_rotator.py\ndevelopment cycle-end rotation]
         AL[audit_logger.py\nImmutable session logs]
         CR[crash_recovery.py\nHeartbeat daemon 5-min]
+    end
+
+    subgraph COMMAND_DELEGATION["Command Delegation Phases"]
+        direction TB
+        CD1[Phase A: Agent MAY auto-execute allowedCommands]
+        CD2[Phase B/C: Only Arbiter scripts may execute delegated commands]
+        CD3[arbiter_capabilities in state.json controls transition]
     end
 
     subgraph GIT_LAYER["Git Layer — The Physical Barrier"]
         direction LR
         PC_HOOK[pre-commit hook\nGherkin syntax + Biome lint + file ownership]
         PP_HOOK[pre-push hook\nBlocks RED state and direct main push]
+        PM_HOOK[post-merge hook\nChecks after merge commit]
         PT_HOOK[post-tag hook\nRelease tag - compliance snapshot]
         GH[Git History\nImmutable record]
     end
@@ -181,7 +189,7 @@ graph TB
 
     subgraph ENGINE_FILES["Engine Files — Workbench Owned"]
         direction LR
-        CLR[.clinerules\nBehavioral constitution\nINT-1, REG-1, REG-2, DEP-1, DEP-2, DEP-3]
+        CLR[.clinerules\nBehavioral constitution\nSLC-1/2, MEM-1/2/3/3a, DEP-1/2/3, FAC-1, CR-1, INT-1, REG-1/2, CMD-1/2/3, TRC-1/2, FOR-1, PVT-1/2, LGF-1]
         RMD[.roomodes\nAgent role definitions]
         WBV[.workbench-version\nEngine version]
         BIO[biome.json\nLinting config]

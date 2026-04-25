@@ -102,6 +102,7 @@ flowchart TD
         S2B3 --> S2B4
         S2B4 -->|invalid| S2B5 --> S2B3
         S2B4 -->|valid| S2B_DONE([Integration skeletons\nregistered in state.json])
+        Note over S2B_SUB: Stage 2b file access: RW: /tests/integration/ only | R: /features/, /src/, /tests/unit/ | Forbidden: /src write
     end
 
     subgraph S3["Stage 3 — Autonomous Execution"]
@@ -147,6 +148,11 @@ flowchart TD
     end
 
     S1E -->|approved - requirements locked| S2A
+    S1E -.->|Delta Prompt during Stage 1| PIVOT_START{PIVOT_IN_PROGRESS}
+    PIVOT_START -->|HITL Gate 1.5| PIVOT_APP{HITL Gate 1.5 Approved}
+    PIVOT_APP --> PIVOT_APPROVED{PIVOT_APPROVED}
+    PIVOT_APPROVED --> RED_STATE[state.json = RED]
+    RED_STATE --> S2D
     S1E -->|rejected| S1A
     S2D --> S2B1
     S2B_DONE --> S3A

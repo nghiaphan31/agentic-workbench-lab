@@ -71,6 +71,7 @@ Creates pivot/ticket-id branch]
         PV3[Architect Agent
 analyzes blast radius
 Modifies existing .feature files]
+        Note over ArchAgent: Rule PVT-2: Only Architect Agent may initiate pivot during Stage 1. Developer Agent may request pivot but requires human approval.
         PV4{HITL Gate 1.5
 Human reviews Git diff
 on pivot/ branch via Roo Chat}

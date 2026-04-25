@@ -33,13 +33,13 @@ Covers the ideation pipeline and the four-stage execution flow.
 ---
 
 ### [ðŸ”´ TDD, State Machine & Memory Rotation](03-tdd-and-state.md)
-Covers the TDD red/green cycle, the state machine, and sprint-end memory rotation.
+Covers the TDD red/green cycle, the state machine, and development cycle-end memory rotation.
 
 | # | Diagram | Theme |
 |---|---------|-------|
 | 6 | [Stage 2 and 3: TDD Red/Green Execution Loop](03-tdd-and-state.md#diagram-6--stage-2-and-3-tdd-redgreen-execution-loop) | Test Engineer â†’ Developer closed loop |
 | 7 | [state.json State Machine](03-tdd-and-state.md#diagram-7--statejson-state-machine) | All valid states and transitions |
-| 19 | [Memory Rotation Policy at Sprint End](03-tdd-and-state.md#diagram-19--memory-rotation-policy-at-sprint-end) | Rotate / Persist / Reset policies |
+| 19 | [Memory Rotation Policy at Development Cycle End](03-tdd-and-state.md#diagram-19--memory-rotation-policy-at-development-cycle-end) | Rotate / Persist / Reset policies |
 
 ---
 

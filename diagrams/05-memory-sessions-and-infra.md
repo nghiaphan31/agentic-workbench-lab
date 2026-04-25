@@ -18,10 +18,11 @@ graph TB
         H2[progress.md — project checkbox & ROTATE]
         H3[decisionLog.md — ADRs & PERSIST]
         H4[systemPatterns.md — conventions & PERSIST]
-        H5[productContext.md — sprint stories & ROTATE]
+        H5[productContext.md — development cycle stories & ROTATE]
         H6[RELEASE.md — release tracking & PERSIST]
         H7[handoff-state.md — inter-agent bus & RESET]
         H8[session-checkpoint.md — crash recovery & RESET]
+        H9[narrativeRequest.md — Phase 0 output & ROTATE]
     end
 
     subgraph COLD["Cold Zone — memory-bank/archive-cold/ — NEVER read directly by agent"]
@@ -36,10 +37,8 @@ graph TB
         M2[read_archive_file — targeted retrieval by filename]
     end
 
-    subgraph MCP_CODE["codebase-memory MCP — Rule MEM-3 — Code Structure"]
-        M3[search_graph — BM25 search for functions and classes]
-        M4[trace_path — callers and callees graph]
-        M5[get_architecture — high-level overview]
+    subgraph MCP_CODE["codebase-memory MCP — Rule MEM-3/3a — Code Structure & Cold Zone Firewall"]
+        M3[14 functions: index_repository, search_graph, query_graph, trace_path, get_code_snippet, get_architecture, list_projects, search_code, detect_changes, manage_adr, ingest_traces, get_graph_schema, delete_project, index_status]
     end
 
     subgraph AGENTS["Agents"]
@@ -48,7 +47,7 @@ graph TB
     end
 
     subgraph ARBITER_MEM["Arbiter — memory_rotator.py"]
-        AR1[Sprint-end rotation trigger]
+        AR1[development cycle-end rotation trigger]
         AR2[ROTATE: archive then reset to template]
         AR3[PERSIST: never moved]
         AR4[RESET: overwrite to empty template]
@@ -59,7 +58,7 @@ graph TB
     AG2 -->|reads all zones directly| HOT
     AG2 -->|reads all zones directly| COLD
     AG1 -->|cold access only via| MCP_ARCHIVE
-    MCP_ARCHIVE -->|queries| COLD
+    MCP_ARCHIVE -.->|MEM-3a Firewall: Cold Zone access via MCP only| COLD
     AG1 -->|code structure queries via| MCP_CODE
     MCP_CODE -->|indexes| SRC["/src — source code"]
 
@@ -92,6 +91,7 @@ Sessions ephemeral - Git is eternal]
         L6[RELEASE.md]:::persist
         L7[handoff-state.md]:::reset
         L8[session-checkpoint.md]:::reset
+        L9[narrativeRequest.md]:::rotate
     end
     classDef rotate fill:#f8d7da,color:#6d2b3d,stroke:#c1121f
     classDef persist fill:#d8f3dc,color:#1b4332,stroke:#2d6a4f
@@ -115,7 +115,7 @@ sequenceDiagram
     participant Docs as docs/conversations/
 
     Note over Agent,Docs: STARTUP PROTOCOL —
-    SCAN → CHECK → CREATE → READ → ACT
+    Step 0 SCAN → Step 1 CHECK → Step 2 CREATE → Step 3 READ → Step 4 ACT
 
     Agent->>Arbiter: SCAN: Run arbiter_check.py check-session
     alt CRITICAL violation found
@@ -308,12 +308,12 @@ mindmap
         Mid-stage requirement change isolation
     Commit Messages
       Conventional Commits format
-        feat-scope - new feature
-        fix-scope - bug fix
-        docs-memory - memory bank update
-        chore-config - configuration change
-        chore-workbench - workbench engine change
-        test-scope - test additions
+        feat(scope) - new feature
+        fix(scope) - bug fix
+        docs(memory) - memory bank update
+        chore(config) - configuration change
+        chore(workbench) - workbench engine change
+        test(scope) - test additions
       REQ-ID in feat commits
         e.g. feat-auth: REQ-001 implement login flow
     File Names
@@ -429,7 +429,7 @@ Patches Engine only]
         C3[status command
 Reads state.json]
         C4[rotate command
-Sprint-end memory rotation]
+development cycle-end memory rotation]
     end
 
     TEMPLATE -->|init: copies Engine files into| ENGINE
