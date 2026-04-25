@@ -31,9 +31,15 @@ graph TB
         C3[archived-productContext — timestamped]
     end
 
-    subgraph MCP_TOOL["MCP Tool — Controlled Cold Access"]
-        M1[Semantic search over cold archive]
-        M2[Targeted retrieval by REQ-ID or date]
+    subgraph MCP_ARCHIVE["archive-query MCP — Rule MEM-1 — Cold Zone Access"]
+        M1[search_archive — semantic search over cold archive]
+        M2[read_archive_file — targeted retrieval by filename]
+    end
+
+    subgraph MCP_CODE["codebase-memory MCP — Rule MEM-3 — Code Structure"]
+        M3[search_graph — BM25 search for functions and classes]
+        M4[trace_path — callers and callees graph]
+        M5[get_architecture — high-level overview]
     end
 
     subgraph AGENTS["Agents"]
@@ -52,8 +58,10 @@ graph TB
     AG1 -->|writes updates during session| HOT
     AG2 -->|reads all zones directly| HOT
     AG2 -->|reads all zones directly| COLD
-    AG1 -->|cold access only via| MCP_TOOL
-    MCP_TOOL -->|queries| COLD
+    AG1 -->|cold access only via| MCP_ARCHIVE
+    MCP_ARCHIVE -->|queries| COLD
+    AG1 -->|code structure queries via| MCP_CODE
+    MCP_CODE -->|indexes| SRC["/src — source code"]
 
     AR1 -->|ROTATE H1 H2 H5| COLD
     AR1 -->|PERSIST H3 H4 H6 stays in| HOT
@@ -65,7 +73,8 @@ Sessions ephemeral - Git is eternal]
 
     style HOT fill:#d8f3dc,color:#1b4332,stroke:#2d6a4f
     style COLD fill:#e6dcc8,color:#3d2b1f,stroke:#8b5e3c
-    style MCP_TOOL fill:#d0e1f2,color:#1d3557,stroke:#457b9d
+    style MCP_ARCHIVE fill:#d0e1f2,color:#1d3557,stroke:#457b9d
+    style MCP_CODE fill:#e8d5f5,color:#3d1a5e,stroke:#7b2d8b
     style ARBITER_MEM fill:#f8d7da,color:#6d2b3d,stroke:#c1121f
     style H3 fill:#d8f3dc,color:#1b4332
     style H4 fill:#d8f3dc,color:#1b4332
