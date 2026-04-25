@@ -133,13 +133,13 @@ stateDiagram-v2
 
 ---
 
-## Diagram 19 — Memory Rotation Policy at Sprint End
+## Diagram 19 — Memory Rotation Policy at Cycle End
 
-> The per-file rotation policy applied by the Memory Rotator script at sprint conclusion. Three distinct policies: Rotate, Persist, Reset.
+> The per-file rotation policy applied by the Memory Rotator script when a development cycle ends (feature reaches MERGED). Three distinct policies: Rotate, Persist, Reset.
 
 ```mermaid
 flowchart TD
-    TRIGGER([Sprint End\nArbiter triggers\nmemory_rotator.py]) --> SCAN
+    TRIGGER([Feature MERGED\nArbiter triggers\nmemory_rotator.py]) --> SCAN
 
     SCAN[Scan memory-bank/hot-context/\nfor all tracked files]
 
@@ -181,7 +181,7 @@ flowchart TD
     RS1 --> COMMIT
     RS2 --> COMMIT
 
-    COMMIT[Git commit\ndocs-memory: sprint-end rotation\nAll changes versioned]
+    COMMIT[Git commit\ndocs-memory: cycle-end rotation\nAll changes versioned]
 
     style ROTATE_POLICY fill:#d0e1f2,color:#1d3557,stroke:#457b9d
     style PERSIST_POLICY fill:#d8f3dc,color:#1b4332,stroke:#2d6a4f

@@ -235,11 +235,11 @@ The persistent memory system counters AI drift and "Lost in the Middle" errors b
   * `progress.md`: Project-wide checkbox state.  
   * `decisionLog.md`: ADRs with date, context, decisions.  
   * `systemPatterns.md`: Technical conventions.  
-  * `productContext.md`: Sprint stories.  
+  * `productContext.md`: Development cycle stories.  
   * `RELEASE.md`: Single source of truth for release tracking.  
   * `handoff-state.md`: Inter-agent handoff data.  
   * `session-checkpoint.md`: 5-minute crash recovery heartbeat.  
-* **The Cold Zone:** Files in `memory-bank/archive-cold/` must *not* be read directly by the agent to prevent flooding the context window with stale data. Access is granted exclusively through the MCP tool (except for the Documentation / Librarian Agent). At sprint end, the Python Arbiter's **Memory Rotator** script moves hot-context files here.
+* **The Cold Zone:** Files in `memory-bank/archive-cold/` must *not* be read directly by the agent to prevent flooding the context window with stale data. Access is granted exclusively through the MCP tool (except for the Documentation / Librarian Agent). When a feature reaches `MERGED` state, the Python Arbiter's **Memory Rotator** script may archive eligible hot-context files here.
 
 ### Hot Zone File Rotation Policy
 
@@ -247,11 +247,11 @@ The following table defines the per-file policy applied by the Memory Rotator at
 
 | File | Rotation Policy | Rationale |
 | :---- | :---- | :---- |
-| `activeContext.md` | **Rotate** (archive, then reset to template) | Stale task context must not bleed into the next sprint. |
-| `progress.md` | **Rotate** (archive, then reset to template) | Sprint-scoped checkbox state is replaced each sprint. |
+| `activeContext.md` | **Rotate** (archive, then reset to template) | Stale task context must not bleed into the next development cycle. |
+| `progress.md` | **Rotate** (archive, then reset to template) | Development cycle checkbox state is replaced each cycle. |
 | `decisionLog.md` | **Persist** (never rotated) | ADRs are permanent architectural records; they accumulate across sprints. |
 | `systemPatterns.md` | **Persist** (never rotated) | Technical conventions are long-lived and cross-sprint. |
-| `productContext.md` | **Rotate** (archive, then reset to template) | Sprint stories are replaced by the next sprint's backlog. |
+| `productContext.md` | **Rotate** (archive, then reset to template) | Development cycle stories are replaced by the next cycle's backlog. |
 | `RELEASE.md` | **Persist** (never rotated) | Single source of truth for all releases; must accumulate. |
 | `handoff-state.md` | **Reset** (overwritten to empty template, not archived) | Handoff data is ephemeral; archiving stale handoffs creates noise. |
 | `session-checkpoint.md` | **Reset** (overwritten to empty template, not archived) | Crash recovery data is only valid for the current session. |
