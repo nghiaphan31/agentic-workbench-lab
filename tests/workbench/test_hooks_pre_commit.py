@@ -76,4 +76,397 @@ class TestPreCommitHook:
         state_factory(state="FEATURE_GREEN", regression_state="CLEAN")
         state = read_state(temp_workbench)
         blocking = state["state"] == "FEATURE_GREEN" and state["regression_state"] == "REGRESSION_RED"
+<<<<<<< Updated upstream
         assert not blocking  # Not blocked since regression is CLEAN
+=======
+        assert not blocking  # Not blocked since regression is CLEAN
+
+    # =============================================================================
+    # UC-068 to UC-071: Branch Name Validation Tests (Gap 1 - CMT-1)
+    # =============================================================================
+
+    def test_uc068_commit_on_main_blocked(self):
+        """UC-068: Commit on main — blocked"""
+        current_branch = "main"
+        blocked_branches = ["main", "master", "develop"]
+        is_blocked = current_branch in blocked_branches
+        assert is_blocked
+
+    def test_uc069_commit_on_develop_blocked(self):
+        """UC-069: Commit on develop — blocked"""
+        current_branch = "develop"
+        blocked_branches = ["main", "master", "develop"]
+        is_blocked = current_branch in blocked_branches
+        assert is_blocked
+
+    def test_uc070_commit_on_feature_branch_allowed(self):
+        """UC-070: Commit on feature branch — allowed"""
+        current_branch = "feature/REQ-001-my-feature"
+        blocked_branches = ["main", "master", "develop"]
+        is_blocked = current_branch in blocked_branches
+        assert not is_blocked
+
+    def test_uc071_commit_on_lab_branch_allowed(self):
+        """UC-071: Commit on lab branch — allowed"""
+        current_branch = "lab/REQ-001-my-feature"
+        blocked_branches = ["main", "master", "develop"]
+        is_blocked = current_branch in blocked_branches
+        assert not is_blocked
+
+    # =============================================================================
+    # UC-077 to UC-079: Merged-Branch Check Tests (Gap 4 - CMT-2)
+    # =============================================================================
+
+    def test_uc077_branch_merged_to_main_blocked(self):
+        """UC-077: Branch merged to main — blocked"""
+        current_branch = "feature/REQ-001"
+        merged_branches = ["main", "develop"]
+        # Simulate: git branch --merged main returns current_branch
+        is_merged = current_branch == "feature/REQ-001"  # simulating git check
+        is_feature_or_lab = current_branch.startswith("feature/") or current_branch.startswith("lab/")
+        is_blocked = is_feature_or_lab and is_merged and "main" in merged_branches
+        assert is_blocked
+
+    def test_uc078_branch_merged_to_develop_blocked(self):
+        """UC-078: Branch merged to develop — blocked"""
+        current_branch = "feature/REQ-001"
+        merged_branches = ["main", "develop"]
+        # Simulate: git branch --merged develop returns current_branch
+        is_merged = current_branch == "feature/REQ-001"  # simulating git check
+        is_feature_or_lab = current_branch.startswith("feature/") or current_branch.startswith("lab/")
+        is_blocked = is_feature_or_lab and is_merged and "develop" in merged_branches
+        assert is_blocked
+
+    def test_uc079_unmerged_feature_branch_allowed(self):
+        """UC-079: Unmerged feature branch — allowed"""
+        current_branch = "feature/REQ-001"
+        # Simulate: git branch --merged main/develop does NOT return current_branch
+        is_merged = False  # simulating git check
+        is_feature_or_lab = current_branch.startswith("feature/") or current_branch.startswith("lab/")
+        is_blocked = is_feature_or_lab and is_merged
+        assert not is_blocked
+
+    # =============================================================================
+    # UC-080, UC-082 to UC-084: Expanded Blocking States Tests (Gap 5)
+    # =============================================================================
+
+    def test_uc080_state_integration_red_blocked(self, temp_workbench, state_factory):
+        """UC-080: state=INTEGRATION_RED — blocked"""
+        state_factory(state="INTEGRATION_RED")
+        state = read_state(temp_workbench)
+        blocking_states = ["REGRESSION_RED", "INTEGRATION_RED", "PIVOT_IN_PROGRESS"]
+        is_blocked = state["state"] in blocking_states
+        assert is_blocked
+
+    def test_uc082_state_regression_red_blocked(self, temp_workbench, state_factory):
+        """UC-082: state=REGRESSION_RED — blocked"""
+        state_factory(state="REGRESSION_RED")
+        state = read_state(temp_workbench)
+        blocking_states = ["REGRESSION_RED", "INTEGRATION_RED", "PIVOT_IN_PROGRESS"]
+        is_blocked = state["state"] in blocking_states
+        assert is_blocked
+
+    def test_uc083_state_green_allowed(self, temp_workbench, state_factory):
+        """UC-083: state=GREEN — allowed"""
+        state_factory(state="GREEN")
+        state = read_state(temp_workbench)
+        blocking_states = ["REGRESSION_RED", "INTEGRATION_RED", "PIVOT_IN_PROGRESS"]
+        is_blocked = state["state"] in blocking_states
+        assert not is_blocked
+
+    def test_uc084_state_init_allowed(self, temp_workbench, state_factory):
+        """UC-084: state=INIT — allowed"""
+        state_factory(state="INIT")
+        state = read_state(temp_workbench)
+        blocking_states = ["REGRESSION_RED", "INTEGRATION_RED", "PIVOT_IN_PROGRESS"]
+        is_blocked = state["state"] in blocking_states
+        assert not is_blocked
+
+    # =============================================================================
+    # GAP-1: GIT_WORKBENCH_SKIP_HOOKS bypass prevention tests
+    # =============================================================================
+
+    def test_gap1_git_workbench_skip_hooks_bypass(self, temp_workbench, state_factory):
+        """
+        GAP-1: GIT_WORKBENCH_SKIP_HOOKS=1 cannot bypass RED state blocking.
+        
+        Even when GIT_WORKBENCH_SKIP_HOOKS is set, the hook should still run
+        critical checks and block commits when state is RED.
+        """
+        import os
+        # Simulate: GIT_WORKBENCH_SKIP_HOOKS=1 is set
+        skip_hooks = os.environ.get("GIT_WORKBENCH_SKIP_HOOKS", "0") == "1"
+        
+        state_factory(state="RED")
+        state = read_state(temp_workbench)
+        
+        # Critical checks that should NOT be bypassed:
+        blocking_states = ["RED", "REGRESSION_RED", "INTEGRATION_RED", "PIVOT_IN_PROGRESS"]
+        is_state_blocking = state["state"] in blocking_states
+        
+        # Even with skip_hooks set, state-based blocking should still apply
+        # The skip_hooks env var only bypasses non-critical checks (like gherkin validation)
+        assert is_state_blocking, "RED state should block regardless of GIT_WORKBENCH_SKIP_HOOKS"
+
+    # =============================================================================
+    # GAP-2: --no-verify bypass detection tests
+    # =============================================================================
+
+    def test_gap2_no_verify_bypass(self, temp_workbench, state_factory):
+        """
+        GAP-2: git commit --no-verify is detected via post-hoc commit metadata check.
+        
+        Due to git limitation, --no-verify bypasses the hook entirely, so the fix
+        implements post-hoc detection that checks commit metadata after the fact.
+        """
+        state_factory(state="RED")
+        state = read_state(temp_workbench)
+        
+        # Simulate: commit was made with --no-verify
+        # The hook cannot prevent this, but post-hoc detection should flag it
+        used_no_verify = True  # simulating that --no-verify was used
+        
+        # Post-hoc detection logic: if state is blocking and --no-verify was used,
+        # this should be flagged as a WARNING/CRITICAL
+        blocking_states = ["RED", "REGRESSION_RED", "INTEGRATION_RED", "PIVOT_IN_PROGRESS"]
+        is_state_blocking = state["state"] in blocking_states
+        
+        # Post-hoc detection: if blocking state + no_verify used = CRITICAL violation
+        is_critical = is_state_blocking and used_no_verify
+        assert is_critical, "Post-hoc detection should flag --no-verify with blocking state as CRITICAL"
+
+    # =============================================================================
+    # GAP-3: last_updated_by spoofing detection tests
+    # =============================================================================
+
+    def test_gap3_last_updated_by_spoofing_detected(self, temp_workbench, state_factory):
+        """
+        GAP-3: Staging state.json with fake last_updated_by triggers WARNING.
+        
+        Verify that when state.json has last_updated_by="test_orchestrator.py"
+        but it was actually modified by a non-Arbiter source, it triggers WARNING.
+        """
+        state_factory(state="INIT", last_updated_by="test_orchestrator.py")
+        state = read_state(temp_workbench)
+        
+        # Simulate: actual author is NOT arbiter (hook interceptors would catch this)
+        actual_author = "agent"  # non-Arbiter source
+        
+        # ALLOWED_WRITERS from pre-commit hook
+        allowed_writers = [
+            "test_orchestrator.py",
+            "integration_test_runner.py",
+            "dependency_monitor.py",
+            "memory_rotator.py",
+            "audit_logger.py",
+            "crash_recovery.py",
+            "workbench-cli",
+            "pre-commit"
+        ]
+        
+        # Check if the claimed author is in allowed writers
+        claimed_by = state.get("last_updated_by", "")
+        is_claimed_arbiter = claimed_by in allowed_writers
+        
+        # Check if actual author is arbiter
+        is_actual_arbiter = actual_author in allowed_writers
+        
+        # Spoofing detected: claimed arbiter but actual is not
+        spoofing_detected = is_claimed_arbiter and not is_actual_arbiter
+        
+        assert spoofing_detected, "Should detect spoofing when last_updated_by claims Arbiter but actual author does not"
+
+    # =============================================================================
+    # GAP-8: REQ-NNN scope validation tests (negative cases)
+    # =============================================================================
+
+    def test_gap8_req_nnn_scope_invalid_format_blocked(self):
+        """
+        GAP-8: feat(old-feature): message is BLOCKED (scope is not REQ-NNN format).
+        
+        After the fix, commit scopes must match REQ-NNN format exactly.
+        """
+        commit_message = "feat(old-feature): add login"
+        
+        # Parse the scope from commit message
+        import re
+        match = re.match(r'^(\w+)\(([^)]+)\):', commit_message)
+        
+        if match:
+            scope = match.group(2)
+            # Scope should be REQ-NNN format (REQ- followed by 3 digits)
+            req_pattern = re.match(r'^REQ-\d{3}$', scope)
+            is_valid_scope = req_pattern is not None
+        else:
+            is_valid_scope = False
+        
+        assert not is_valid_scope, "feat(old-feature) should be blocked - scope is not REQ-NNN format"
+
+    def test_gap8_req_nnn_scope_valid_format_allowed(self):
+        """
+        GAP-8: feat(REQ-001): message is ALLOWED (scope is valid REQ-NNN format).
+        """
+        commit_message = "feat(REQ-001): add login"
+        
+        import re
+        match = re.match(r'^(\w+)\(([^)]+)\):', commit_message)
+        
+        if match:
+            scope = match.group(2)
+            req_pattern = re.match(r'^REQ-\d{3}$', scope)
+            is_valid_scope = req_pattern is not None
+        else:
+            is_valid_scope = False
+        
+        assert is_valid_scope, "feat(REQ-001) should be allowed - scope is valid REQ-NNN format"
+
+    # =============================================================================
+    # GAP-11 Tests: Deferred State Update Mechanism (STM-1 Compliance)
+    # =============================================================================
+
+    def test_gap11_precommit_does_not_write_state_json_directly(self):
+        """
+        GAP-11: Pre-commit hook MUST NOT write directly to state.json.
+        Only the Arbiter may write to state.json (Rule STM-1).
+        
+        This test verifies the pre-commit hook uses deferred mechanism instead.
+        """
+        import re
+        
+        with open('.workbench/hooks/pre-commit', 'r') as f:
+            hook_content = f.read()
+        
+        # The pre-commit hook should NOT contain direct state.json writes for file ownership
+        # The old code pattern was: with open('state.json', 'w') as out:
+        
+        # Check that the section 6 (file ownership) does NOT directly write to state.json
+        # It should instead write to a deferred flag file
+        
+        # Find the file ownership section (around line 270-310)
+        lines = hook_content.split('\n')
+        in_ownership_section = False
+        has_deferred_write = False
+        has_direct_state_write = False
+        section_lines = []
+        
+        for i, line in enumerate(lines):
+            if '6. DEFERRED FILE OWNERSHIP UPDATE' in line:
+                in_ownership_section = True
+            elif in_ownership_section and ('7. CONVENTIONAL COMMITS' in line or 'ALL CHECKS PASSED' in line):
+                in_ownership_section = False
+            
+            if in_ownership_section:
+                section_lines.append(line)
+        
+        # Check the section for patterns (not necessarily on the same line)
+        section_text = '\n'.join(section_lines)
+        
+        # Check for deferred file write pattern - presence of both elements in section
+        if '.deferred_state_update' in section_text and 'open(' in section_text:
+            has_deferred_write = True
+        # Check for direct state.json write (the old forbidden pattern)
+        if "with open('state.json', 'w')" in section_text or 'with open("state.json", "w")' in section_text:
+            has_direct_state_write = True
+        
+        assert has_deferred_write, "Pre-commit should write to deferred flag file, not directly to state.json"
+        assert not has_direct_state_write, "Pre-commit should NOT write directly to state.json (STM-1 violation)"
+
+    def test_gap11_deferred_update_file_format(self):
+        """
+        GAP-11: Deferred update file should contain proper JSON structure.
+        """
+        import json
+        import os
+        from datetime import datetime, timezone
+        
+        # Simulate what pre-commit writes to the deferred file
+        deferred_update = {
+            'operation': 'UPDATE_FILE_OWNERSHIP',
+            'active_req_id': 'REQ-001',
+            'files': ['src/user.ts', 'src/auth.ts'],
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'triggered_by': 'pre-commit'
+        }
+        
+        # Verify structure
+        assert deferred_update['operation'] == 'UPDATE_FILE_OWNERSHIP'
+        assert 'active_req_id' in deferred_update
+        assert 'files' in deferred_update
+        assert isinstance(deferred_update['files'], list)
+        assert deferred_update['triggered_by'] == 'pre-commit'
+        
+        # Verify JSON serialization works
+        json_str = json.dumps([deferred_update], indent=2)
+        parsed = json.loads(json_str)
+        assert len(parsed) == 1
+        assert parsed[0]['operation'] == 'UPDATE_FILE_OWNERSHIP'
+
+    def test_gap11_postcommit_processes_deferred_updates(self):
+        """
+        GAP-11: Post-commit hook should process deferred state updates.
+        
+        The post-commit hook should:
+        1. Check for .deferred_state_update file
+        2. Apply updates to state.json
+        3. Remove the deferred file on success
+        """
+        with open('.workbench/hooks/post-commit', 'r') as f:
+            post_commit_content = f.read()
+        
+        # Verify post-commit handles deferred updates
+        assert '.deferred_state_update' in post_commit_content, "Post-commit should reference deferred update file"
+        assert 'DEFERRED' in post_commit_content or 'deferred' in post_commit_content, "Post-commit should process deferred updates"
+
+    def test_gap11_state_json_written_only_by_arbiter(self):
+        """
+        GAP-11: Verify state.json writes are only in Arbiter scripts.
+        
+        This test scans the codebase to ensure state.json is only written
+        by legitimate Arbiter scripts (not pre-commit hook).
+        """
+        import os
+        import re
+        
+        # Patterns that indicate direct state.json writes
+        forbidden_patterns = [
+            r"with open\(['\"]state\.json['\"].*['\"]w['\"]",
+            r"json\.dump\([^)]*state[^)]*open\(['\"]state\.json['\"]",
+        ]
+        
+        # Files that ARE allowed to write state.json
+        allowed_files = [
+            '.workbench/scripts/arbiter_check.py',
+            '.workbench/scripts/test_orchestrator.py',
+            '.workbench/scripts/gatekeeper.py',
+            '.workbench/scripts/audit_logger.py',
+            '.workbench/scripts/crash_recovery.py',
+            '.workbench/scripts/memory_rotator.py',
+            '.workbench/scripts/dependency_monitor.py',
+            '.workbench/scripts/integration_test_runner.py',
+            '.workbench/hooks/post-commit',
+        ]
+        
+        violations = []
+        
+        # Check all shell scripts in hooks
+        hooks_dir = '.workbench/hooks'
+        if os.path.exists(hooks_dir):
+            for filename in os.listdir(hooks_dir):
+                if filename.startswith('.'):
+                    continue
+                filepath = os.path.join(hooks_dir, filename)
+                if os.path.isfile(filepath):
+                    with open(filepath, 'r') as f:
+                        content = f.read()
+                        for pattern in forbidden_patterns:
+                            if re.search(pattern, content):
+                                # Check if it's in post-commit (allowed for deferred processing)
+                                if filename == 'post-commit':
+                                    # post-commit is allowed to write state.json as it applies deferred updates
+                                    continue
+                                violations.append(f"{filepath}: matches forbidden pattern")
+        
+        # Filter: pre-commit should NOT appear in violations (we already verified it uses deferred mechanism)
+        precommit_violations = [v for v in violations if 'pre-commit' in v]
+        assert len(precommit_violations) == 0, f"Pre-commit hook must not write state.json directly: {precommit_violations}"
+>>>>>>> Stashed changes

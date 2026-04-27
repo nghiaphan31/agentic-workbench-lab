@@ -1,0 +1,146 @@
+#!/bin/sh
+# post-commit hook — The Arbiter's Gate Notification Runner + Deferred State Processing
+#
+# Owner: The Arbiter (Layer 2b)
+# Version: 2.2
+# Location: .workbench/hooks/post-commit
+#
+# This hook runs AFTER a successful git commit (including merges).
+# It handles:
+#   1. Gate notification (surfacing pending HITL gates to the human)
+#   2. Deferred state.json updates from pre-commit hook (GAP-11 STM-1 compliance)
+#
+# Exit codes:
+#   0 = always allowed (non-blocking hook)
+#
+# NOTE: This is an INFORMATIONAL hook — it never blocks commits.
+#       Gate states are checked at session start via arbiter_check.py check-session.
+
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo "[POST-COMMIT] Commit complete — checking for pending gates and deferred updates..."
+
+# =============================================================================
+# 1. PROCESS DEFERRED STATE.UPDATES (GAP-11: STM-1 Compliance)
+# =============================================================================
+DEFERRED_FILE=".workbench/hooks/.deferred_state_update"
+
+if [ -f "$DEFERRED_FILE" ]; then
+    echo "[POST-COMMIT] Processing deferred state updates from pre-commit hook..."
+    
+    # Use arbiter's state management via arbiter_check.py or direct Python
+    # The Arbiter owns state.json writes, so we delegate to arbiter_check.py
+    if [ -f ".workbench/scripts/arbiter_check.py" ]; then
+        PROCESS_RESULT=$(python .workbench/scripts/arbiter_check.py apply-deferred 2>&1 || echo "APPLY_FAILED")
+        if echo "$PROCESS_RESULT" | grep -q "APPLY_FAILED\|ERROR"; then
+            echo "[POST-COMMIT] ${YELLOW}WARNING: Failed to apply deferred state updates${NC}"
+            echo "$PROCESS_RESULT"
+            # Don't delete the deferred file if processing failed
+            # The next post-commit will retry
+        else
+            echo "[POST-COMMIT] ${GREEN}Deferred state updates applied successfully${NC}"
+            # Clear the deferred file only on success
+            rm -f "$DEFERRED_FILE"
+        fi
+    else
+        # Fallback: Direct Arbiter integration via Python (bypassing pre-commit restrictions)
+        # This is SAFE here because post-commit runs AFTER the commit, not before
+        python -c "
+import json, os
+from datetime import datetime, timezone
+
+deferred_file = '.workbench/hooks/.deferred_state_update'
+if not os.path.exists(deferred_file):
+    print('[POST-COMMIT] No deferred updates to process')
+    exit(0)
+
+try:
+    with open(deferred_file, 'r') as f:
+        deferred_updates = json.load(f)
+    
+    if not isinstance(deferred_updates, list):
+        deferred_updates = [deferred_updates]
+    
+    # Load current state
+    with open('state.json', 'r') as f:
+        state = json.load(f)
+    
+    # Process each deferred update
+    files_updated = 0
+    for update in deferred_updates:
+        if update.get('operation') == 'UPDATE_FILE_OWNERSHIP':
+            active_req_id = update.get('active_req_id')
+            files = update.get('files', [])
+            
+            if active_req_id and files:
+                ownership = state.get('file_ownership', {})
+                for f in files:
+                    ownership[f] = active_req_id
+                    files_updated += 1
+                state['file_ownership'] = ownership
+    
+    # Update metadata
+    state['last_updated_by'] = 'post-commit-hook'
+    state['last_updated'] = datetime.now(timezone.utc).isoformat()
+    
+    # Write back atomically
+    with open('state.json', 'w') as f:
+        json.dump(state, f, indent=2)
+        f.write('\n')
+    
+    print(f'[POST-COMMIT] Applied {files_updated} file ownership updates')
+    
+    # Clear deferred file on success
+    os.remove(deferred_file)
+    print('[POST-COMMIT] Deferred update file cleared')
+    
+except Exception as e:
+    print(f'[POST-COMMIT] Error processing deferred updates: {e}')
+    exit(1)
+" 2>/dev/null || echo "[POST-COMMIT] Could not process deferred state updates"
+    fi
+else
+    echo "[POST-COMMIT] No deferred state updates pending"
+fi
+
+# =============================================================================
+# 2. RUN GATE NOTIFICATION
+# =============================================================================
+if [ -f ".workbench/scripts/gate_notification.py" ]; then
+    result=$(python .workbench/scripts/gate_notification.py --verbose 2>&1 || true)
+    exit_code=$?
+    
+    if echo "$result" | grep -qi "HITL.*gate\|pending.*human\|workflow.*blocked"; then
+        echo "[POST-COMMIT] ${YELLOW}⚠️ PENDING HUMAN ACTIONS DETECTED:${NC}"
+        echo "$result"
+        echo ""
+        echo "[POST-COMMIT] Run: python .workbench/scripts/orchestrator_monitor.py status --verbose"
+    elif echo "$result" | grep -qi "no pending\|not blocked\|workflow clear"; then
+        echo "[POST-COMMIT] ${GREEN}No pending gates — workflow clear${NC}"
+    else
+        echo "[POST-COMMIT] Gate check complete"
+    fi
+else
+    echo "[POST-COMMIT] gate_notification.py not found — skipping gate check"
+fi
+
+# =============================================================================
+# 3. LOG COMMIT TO AUDIT TRAIL
+# =============================================================================
+if [ -f ".workbench/scripts/audit_logger.py" ]; then
+    commit_hash=$(git rev-parse --verify HEAD 2>/dev/null || echo "unknown")
+    echo "[POST-COMMIT] Logging commit to audit trail..."
+    python .workbench/scripts/audit_logger.py save --session-id "post-commit-$(date +%s)" --branch "$(git branch --show-current)" 2>/dev/null || true
+fi
+
+echo "[POST-COMMIT] Post-commit checks complete"
+exit 0

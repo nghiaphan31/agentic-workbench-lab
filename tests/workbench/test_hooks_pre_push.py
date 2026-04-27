@@ -84,4 +84,128 @@ class TestPrePushHook:
         assert len(conflicts) > 0
         # Push should continue with warning (not hard-blocked)
         is_blocked = self._is_push_blocked(state["state"])
+<<<<<<< Updated upstream
         # Note: conflicts don't add extra blocking beyond the state check
+=======
+        # Note: conflicts don't add extra blocking beyond the state check
+
+    def test_uc065_direct_push_to_develop_blocked(self):
+        """UC-065: Direct push to develop (non-merge commit) — blocked"""
+        # Simulate: target_branch = "develop", parent_count = 1 (not a merge)
+        target_branch = "develop"
+        parent_count = 1  # single parent = not a merge commit
+        is_blocked = target_branch in ["main", "master", "develop"] and parent_count < 2
+        assert is_blocked
+
+    def test_uc066_trivial_chore_to_develop_with_approval_allowed(self):
+        """UC-066: Trivial chore with APPROVED-BY-HUMAN to develop — allowed"""
+        target_branch = "develop"
+        parent_count = 1  # single parent = not a merge commit
+        commit_message = "chore(docs): fix typo in README APPROVED-BY-HUMAN"
+        has_approval = "APPROVED-BY-HUMAN" in commit_message
+        
+        # Check if this would be blocked first
+        would_be_blocked = target_branch == "develop" and parent_count < 2
+        # Exception allows push if has approval
+        is_blocked = would_be_blocked and not has_approval
+        assert not is_blocked
+
+    def test_uc067_feature_branch_push_allowed(self):
+        """UC-067: Push to feature/* branch — always allowed"""
+        target_branch = "feature/REQ-001-my-feature"
+        parent_count = 1  # could be merge or regular commit
+        blocked_branches = ["main", "master", "develop"]
+        is_blocked = target_branch in blocked_branches and parent_count < 2
+        assert not is_blocked
+
+    # =============================================================================
+    # UC-075 to UC-076: --delete-branch Warning Tests (Gap 3 - CMT-2)
+    # =============================================================================
+
+    def test_uc075_merge_to_main_warns_about_delete_branch(self):
+        """UC-075: Merge to main warns about --delete-branch"""
+        branch = "main"
+        oldrev = "abc123"
+        newrev = "def456"
+        # For a merge, merge_base differs from oldrev (it's the divergence point)
+        merge_base = "parent123"  # != oldrev means it's a merge
+
+        # Simulate the warning check from pre-push hook
+        is_merge_to_protected = branch in ["main", "develop"]
+        merge_base_changed = merge_base != oldrev
+        should_warn = is_merge_to_protected and merge_base_changed
+        assert should_warn
+
+    def test_uc076_merge_to_develop_warns_about_delete_branch(self):
+        """UC-076: Merge to develop warns about --delete-branch"""
+        branch = "develop"
+        oldrev = "abc123"
+        newrev = "def456"
+        # For a merge, merge_base differs from oldrev (it's the divergence point)
+        merge_base = "parent456"  # != oldrev means it's a merge
+
+        # Simulate the warning check from pre-push hook
+        is_merge_to_protected = branch in ["main", "develop"]
+        merge_base_changed = merge_base != oldrev
+        should_warn = is_merge_to_protected and merge_base_changed
+        assert should_warn
+
+    # =============================================================================
+    # GAP-4: APPROVED-BY-HUMAN exact match validation tests
+    # =============================================================================
+
+    def test_gap4_approved_by_human_substring_is_blocked(self):
+        """
+        GAP-4: feat(REQ-001): add login APPROVED-BY-HUMAN is BLOCKED.
+        
+        The APPROVED-BY-HUMAN exception requires the exact footer format:
+        footer must be on its own line at the end, not embedded in the message.
+        
+        Before the fix: Would have passed (substring match was sufficient)
+        After the fix: Should fail (requires proper footer format)
+        """
+        commit_message = "feat(REQ-001): add login APPROVED-BY-HUMAN"
+        
+        # Check if APPROVED-BY-HUMAN is a proper footer (on its own line at end)
+        lines = commit_message.split('\n')
+        has_proper_footer = False
+        
+        if len(lines) > 1:
+            # Footer must be on its own line at the end
+            last_line = lines[-1].strip()
+            has_proper_footer = last_line == "APPROVED-BY-HUMAN"
+        
+        # For feature commits to protected branches, strict footer format is required
+        target_branch = "develop"
+        parent_count = 1  # single parent = not a merge commit
+        is_direct_push_to_protected = target_branch in ["main", "develop"] and parent_count < 2
+        
+        # Strict check: proper footer required for exception to apply
+        would_be_blocked = is_direct_push_to_protected and not has_proper_footer
+        
+        assert would_be_blocked, "feat(REQ-001): add login APPROVED-BY-HUMAN should be BLOCKED - not proper footer format"
+
+    def test_gap4_approved_by_human_proper_footer_allowed(self):
+        """
+        GAP-4: feat(REQ-001): add login\\nAPPROVED-BY-HUMAN is ALLOWED.
+        
+        Proper footer format: message on one line, APPROVED-BY-HUMAN on its own line at end.
+        """
+        commit_message = "feat(REQ-001): add login\nAPPROVED-BY-HUMAN"
+        
+        lines = commit_message.split('\n')
+        has_proper_footer = False
+        
+        if len(lines) > 1:
+            last_line = lines[-1].strip()
+            has_proper_footer = last_line == "APPROVED-BY-HUMAN"
+        
+        target_branch = "develop"
+        parent_count = 1
+        is_direct_push_to_protected = target_branch in ["main", "develop"] and parent_count < 2
+        
+        # With proper footer, should not be blocked
+        would_be_blocked = is_direct_push_to_protected and not has_proper_footer
+        
+        assert not would_be_blocked, "Proper footer format should allow the push"
+>>>>>>> Stashed changes

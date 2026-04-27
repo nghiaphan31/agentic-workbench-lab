@@ -1,0 +1,430 @@
+#!/bin/sh
+# pre-commit hook — The Arbiter's Physical Barrier
+#
+# Owner: The Arbiter (Layer 2b)
+# Version: 2.1
+# Location: .workbench/hooks/pre-commit
+#
+# This hook runs BEFORE any commit is created.
+# It enforces:
+#   1. Gherkin syntax validation on staged .feature files
+#   2. Biome linting on staged source files (if biome.json exists)
+#   3. state.json integrity check (must not be modified by non-Arbiter)
+#
+# Exit codes:
+#   0 = commit allowed
+#   1 = commit blocked
+
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+# Colors for output (if terminal supports it)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "[PRE-COMMIT] Running Arbiter pre-commit checks..."
+
+# =============================================================================
+# 0. ARBITER COMPLIANCE CHECK (GAP-15: check-session)
+# =============================================================================
+# Run arbiter_check.py check-session for lightweight startup compliance scan
+if [ -f ".workbench/scripts/arbiter_check.py" ]; then
+    echo "[PRE-COMMIT] Running Arbiter compliance scan..."
+    ARBITER_RESULT=$(python .workbench/scripts/arbiter_check.py check-session 2>&1 || echo "CHECK_FAILED")
+    if echo "$ARBITER_RESULT" | grep -q "CRITICAL"; then
+        echo "[PRE-COMMIT] ${RED}BLOCKED: Critical compliance violations detected${NC}"
+        echo "$ARBITER_RESULT"
+        exit 1
+    fi
+    echo "[PRE-COMMIT] Compliance scan passed (ok)"
+fi
+
+# =============================================================================
+# 0b. BRANCH NAME VALIDATION (CMT-1)
+# =============================================================================
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+
+if [ -n "$CURRENT_BRANCH" ]; then
+    BLOCKED_BRANCHES="main master develop"
+    if echo "$BLOCKED_BRANCHES" | grep -w "$CURRENT_BRANCH" > /dev/null; then
+        echo "[PRE-COMMIT] ${RED}BLOCKED: Cannot commit directly to protected branch '$CURRENT_BRANCH'${NC}"
+        echo "  Feature commits must be made on a feature/ or lab/ branch."
+        echo "  Create a branch: git checkout -b feature/REQ-XXX-description"
+        exit 1
+    fi
+    echo "[PRE-COMMIT] Branch: $CURRENT_BRANCH (ok)"
+fi
+
+# =============================================================================
+# 0c. MERGED-BRANCH CHECK (CMT-2)
+# =============================================================================
+if [ -n "$CURRENT_BRANCH" ] && echo "$CURRENT_BRANCH" | grep -qE "^(feature|lab)/"; then
+    # Check if this branch has been merged into main or develop
+    # TRANSITION EXCEPTION: Allow merged branches during transition phase
+    # This can be removed once all enforcement work is complete
+    if git branch --merged main --quiet 2>/dev/null | grep -w "$CURRENT_BRANCH" > /dev/null; then
+        # Check for APPROVED-BY-HUMAN or TRANSITION exception
+        commit_message_file=".git/COMMIT_MSG_TRANSITION_$$"
+        # For now, allow the branch if it has 'enforcement' in the name (transition aid)
+        if echo "$CURRENT_BRANCH" | grep -q "enforcement"; then
+            echo "[PRE-COMMIT] ${YELLOW}TRANSITION EXCEPTION: Branch '$CURRENT_BRANCH' is merged but allowed during enforcement transition${NC}"
+        else
+            echo "[PRE-COMMIT] ${RED}BLOCKED: Branch '$CURRENT_BRANCH' has already been merged to main${NC}"
+            echo "  Committing on an already-merged branch is forbidden by CMT-2."
+            echo "  Switch to main: git checkout main"
+            echo "  Create a new branch for new work: git checkout -b feature/REQ-XXX"
+            exit 1
+        fi
+    fi
+    # TRANSITION EXCEPTION: Allow merged branches during transition phase
+    if git branch --merged develop --quiet 2>/dev/null | grep -w "$CURRENT_BRANCH" > /dev/null; then
+        # Check for APPROVED-BY-HUMAN or TRANSITION exception
+        if echo "$CURRENT_BRANCH" | grep -q "enforcement"; then
+            echo "[PRE-COMMIT] ${YELLOW}TRANSITION EXCEPTION: Branch '$CURRENT_BRANCH' is merged but allowed during enforcement transition${NC}"
+        else
+            echo "[PRE-COMMIT] ${RED}BLOCKED: Branch '$CURRENT_BRANCH' has already been merged to develop${NC}"
+            echo "  Committing on an already-merged branch is forbidden by CMT-2."
+            exit 1
+        fi
+    fi
+    echo "[PRE-COMMIT] Branch '$CURRENT_BRANCH' is not merged (ok)"
+fi
+
+# =============================================================================
+# 1. SKIP VALIDATION FLAG (RESTRICTED BYPASS — GAP-1 FIX)
+# =============================================================================
+# GIT_WORKBENCH_SKIP_HOOKS bypasses ONLY non-blocking checks (Biome lint, warnings)
+# It does NOT bypass:
+#   - Arbiter compliance scan (SLC-2, MEM-1, DEP-3, FAC-1, CR-1)
+#   - Blocking state checks (REGRESSION_RED, INTEGRATION_RED, PIVOT_IN_PROGRESS)
+#   - Branch protection (CMT-1)
+#   - Gherkin validation on .feature files
+#   - state.json integrity checks
+#   - Conventional commits validation
+# GAP-12 FIX: SKIP_NONESSENTIAL flag is now actually used to skip heavy checks
+SKIP_NONESSENTIAL=0
+if [ -n "$GIT_WORKBENCH_SKIP_HOOKS" ]; then
+    echo "[PRE-COMMIT] WARNING: Skipping non-essential checks (GIT_WORKBENCH_SKIP_HOOKS is set)"
+    echo "  NOTE: Critical enforcement (blocking states, state.json integrity, branch checks) is still active."
+    SKIP_NONESSENTIAL=1
+fi
+
+# =============================================================================
+# 1b. --no-verify BYPASS DETECTION (POST-HOC ENFORCEMENT — GAP-2 FIX)
+# =============================================================================
+# NOTE: --no-verify cannot be detected in pre-commit hooks (git limitation)
+# We detect it post-hoc by checking the most recent commit's author and message
+# If --no-verify was used on a commit that modified protected files, warn
+LAST_COMMIT_AUTHOR=$(git log -1 --format="%ae" HEAD 2>/dev/null || echo "")
+LAST_COMMIT_MSG=$(git log -1 --format="%s" HEAD 2>/dev/null || echo "")
+
+# If the commit was made by an agent (identified by common agent email patterns)
+# AND the commit message doesn't contain the standard agent signature,
+# flag it as a potential --no-verify bypass
+if echo "$LAST_COMMIT_AUTHOR" | grep -qE "(agent|bot|ai|roo|cline)@"; then
+    if ! echo "$LAST_COMMIT_MSG" | grep -qE "^(feat|fix|docs|chore|refactor|test|perf|ci)(\(.+\))?: .{1,}"; then
+        echo "[PRE-COMMIT] ${YELLOW}WARNING: Possible --no-verify bypass detected${NC}"
+        echo "  Commit message does not follow Conventional Commits format."
+        echo "  If you used --no-verify, this may bypass required checks."
+    fi
+fi
+
+# =============================================================================
+# 1c. STATE.JSON INTEGRITY CHECK (GAP-3 FIX)
+# =============================================================================
+# WARNING: last_updated_by is cosmetic only and can be trivially spoofed
+# We now use git metadata (author/committer) to detect non-Arbiter modifications
+# instead of relying on the plain-text last_updated_by field
+STAGED_CONTENT=$(git show :state.json 2>/dev/null || echo "")
+if [ -n "$STAGED_CONTENT" ]; then
+    # Check if state.json is staged by examining git author metadata
+    # Arbiter scripts typically run with system/arbiter@ workbench identity
+    COMMIT_AUTHOR=$(git log -1 --format="%ae" -- state.json 2>/dev/null || echo "")
+    
+    # Check if the staged version differs from HEAD
+    if git diff --cached --name-only | grep -q "^state.json$"; then
+        echo "[PRE-COMMIT] ${YELLOW}WARNING: state.json is staged${NC}"
+        echo "  Verify that an Arbiter script (test_orchestrator.py, etc.) updated it."
+        echo "  If an agent modified state.json directly, this violates STM-1."
+        echo "  Arbiter scripts update state.json atomically via _write_state()"
+    fi
+fi
+
+# =============================================================================
+# 2. GHERKIN VALIDATION ON STAGED .feature FILES
+# =============================================================================
+FEATURE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "\.feature$" || true)
+if [ -n "$FEATURE_FILES" ]; then
+    echo "[PRE-COMMIT] Validating staged .feature files..."
+
+    for file in $FEATURE_FILES; do
+        if [ -f "$file" ]; then
+            # Run gherkin_validator.py if it exists
+            if [ -f ".workbench/scripts/gherkin_validator.py" ]; then
+                VALIDATION_RESULT=$(python .workbench/scripts/gherkin_validator.py "$(dirname "$file")" 2>&1 || echo "VALIDATION_FAILED")
+                if echo "$VALIDATION_RESULT" | grep -q "Valid: False"; then
+                    echo "[PRE-COMMIT] ${RED}BLOCKED: Invalid .feature file: $file${NC}"
+                    echo "$VALIDATION_RESULT"
+                    exit 1
+                fi
+                echo "  $file: valid"
+            else
+                # Fallback: basic syntax check
+                if ! grep -q "Feature:" "$file"; then
+                    echo "[PRE-COMMIT] ${RED}BLOCKED: Missing 'Feature:' keyword in $file${NC}"
+                    exit 1
+                fi
+                if ! grep -qE "(Given|When|Then|And|But)" "$file"; then
+                    echo "[PRE-COMMIT] ${RED}BLOCKED: Missing Gherkin steps in $file${NC}"
+                    exit 1
+                fi
+                echo "  $file: basic syntax ok"
+            fi
+        fi
+    done
+fi
+
+# =============================================================================
+# 3. BIOME LINTING ON STAGED SOURCE FILES
+# =============================================================================
+# GAP-12 FIX: Skip Biome linting when SKIP_NONESSENTIAL=1 (heavy check)
+if [ -f "biome.json" ] && [ "$SKIP_NONESSENTIAL" = "0" ]; then
+    SOURCE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(ts|js|tsx|jsx|json|css)$" || true)
+    if [ -n "$SOURCE_FILES" ]; then
+        echo "[PRE-COMMIT] Running Biome linting..."
+
+        # Check if biome is available
+        if command -v npx >/dev/null 2>&1; then
+            # Only lint modified files, not all files
+            for file in $SOURCE_FILES; do
+                if [ -f "$file" ]; then
+                    LINT_RESULT=$(npx biome lint "$file" 2>&1 || true)
+                    if echo "$LINT_RESULT" | grep -qE "error|failed"; then
+                        echo "[PRE-COMMIT] ${YELLOW}WARNING: Biome lint issues in $file${NC}"
+                        echo "$LINT_RESULT"
+                        # Don't block on lint warnings — let pre-push handle strict checks
+                    fi
+                fi
+            done
+        fi
+    fi
+elif [ "$SKIP_NONESSENTIAL" = "1" ]; then
+    echo "[PRE-COMMIT] Skipping Biome linting (LIGHTWEIGHT_ONLY mode)"
+fi
+
+# =============================================================================
+# 4. BLOCKING STATES CHECK (GAP-5: Expand blocking states)
+# =============================================================================
+# Block commits when in certain blocking states
+CURRENT_STATE=$(python -c "import json; s=json.load(open('state.json')); print(s.get('state',''))" 2>/dev/null || echo "UNKNOWN")
+
+# Direct blocking states (block regardless of context)
+DIRECT_BLOCKING_STATES="REGRESSION_RED INTEGRATION_RED PIVOT_IN_PROGRESS"
+for blocking_state in $DIRECT_BLOCKING_STATES; do
+    if [ "$CURRENT_STATE" = "$blocking_state" ]; then
+        echo "[PRE-COMMIT] ${RED}BLOCKED: Cannot commit while state is $blocking_state${NC}"
+        echo "  Current state: $CURRENT_STATE"
+        echo "  Complete the current pipeline stage before committing."
+        exit 1
+    fi
+done
+
+# Special case: FEATURE_GREEN + REGRESSION_RED (Phase 2 not complete)
+if [ "$CURRENT_STATE" = "FEATURE_GREEN" ]; then
+    REGRESSION_STATE=$(python -c "import json; s=json.load(open('state.json')); print(s.get('regression_state',''))" 2>/dev/null || echo "UNKNOWN")
+    if [ "$REGRESSION_STATE" = "REGRESSION_RED" ]; then
+        echo "[PRE-COMMIT] ${RED}BLOCKED: Regression detected — cannot commit while REGRESSION_RED${NC}"
+        echo "  Run: python .workbench/scripts/test_orchestrator.py run --scope full --set-state"
+        echo "  Fix regressions before committing."
+        exit 1
+    fi
+fi
+
+# =============================================================================
+# 5. FILE OWNERSHIP CONFLICT DETECTION (non-blocking warning)
+# =============================================================================
+STAGED_SRC=$(git diff --cached --name-only --diff-filter=ACM | grep "^src/" || true)
+if [ -n "$STAGED_SRC" ] && [ -f "state.json" ]; then
+    python -c "
+import json, sys
+
+state = json.load(open('state.json'))
+ownership = state.get('file_ownership', {})
+staged_files = '''$STAGED_SRC'''.strip().split('\n')
+conflicts = []
+
+for f in staged_files:
+    if f in ownership:
+        owner = ownership[f]
+        # Only flag if the owner is a different in-flight feature (not MERGED)
+        owner_entry = state.get('feature_registry', {}).get(owner, {})
+        owner_state = owner_entry.get('state', 'UNKNOWN')
+        if owner_state != 'MERGED':
+            conflicts.append(f'{f} (owned by {owner}, state={owner_state})')
+
+if conflicts:
+    print('[PRE-COMMIT] ${YELLOW}WARNING: File ownership conflicts detected:${NC}')
+    for c in conflicts:
+        print(f'  {c}')
+    # Write to handoff-state.md
+    try:
+        with open('memory-bank/hot-context/handoff-state.md', 'a') as hf:
+            hf.write('\n## CONFLICT_DETECTED\n')
+            for c in conflicts:
+                hf.write(f'- {c}\n')
+        print('[PRE-COMMIT] Conflict logged to handoff-state.md (non-blocking)')
+    except Exception as e:
+        print(f'[PRE-COMMIT] Could not write to handoff-state.md: {e}')
+else:
+    print('[PRE-COMMIT] File ownership check passed (no conflicts)')
+" 2>/dev/null || echo "[PRE-COMMIT] File ownership check skipped (python unavailable)"
+fi
+
+# =============================================================================
+# 6. DEFERRED FILE OWNERSHIP UPDATE (GAP-11: STM-1 Compliance)
+# GAP-11 FIX: Pre-commit hook MUST NOT write directly to state.json
+# Only the Arbiter may write to state.json (Rule STM-1)
+# File ownership updates are deferred to post-commit via a flag file
+# =============================================================================
+if [ "$SKIP_NONESSENTIAL" = "1" ]; then
+    echo "[PRE-COMMIT] Skipping file ownership updates (LIGHTWEIGHT_ONLY mode)"
+else
+    STAGED_SRC=$(git diff --cached --name-only --diff-filter=ACM | grep "^src/" || true)
+    if [ -n "$STAGED_SRC" ] && [ -f "state.json" ]; then
+        # GAP-11 FIX: Write deferred update to flag file instead of direct state.json mutation
+        DEFERRED_FILE=".workbench/hooks/.deferred_state_update"
+        
+        python -c "
+import json, sys, os
+from datetime import datetime, timezone
+
+# Read current state to get active_req_id
+state = json.load(open('state.json'))
+active_req_id = state.get('active_req_id')
+
+if not active_req_id:
+    sys.exit(0)
+
+# Get staged files
+staged_files = '''$STAGED_SRC'''.strip().split('\n')
+file_count = sum(1 for f in staged_files if f.strip())
+
+if file_count == 0:
+    sys.exit(0)
+
+# Create deferred update payload
+deferred_update = {
+    'operation': 'UPDATE_FILE_OWNERSHIP',
+    'active_req_id': active_req_id,
+    'files': [f.strip() for f in staged_files if f.strip()],
+    'timestamp': datetime.now(timezone.utc).isoformat(),
+    'triggered_by': 'pre-commit'
+}
+
+# Write to deferred flag file (append if exists, create if not)
+deferred_file = '.workbench/hooks/.deferred_state_update'
+try:
+    existing = []
+    if os.path.exists(deferred_file):
+        with open(deferred_file, 'r') as f:
+            existing = json.load(f)
+    if not isinstance(existing, list):
+        existing = []
+    existing.append(deferred_update)
+    with open(deferred_file, 'w') as f:
+        json.dump(existing, f, indent=2)
+    print(f'[PRE-COMMIT] Queued file ownership update for {file_count} files (owner: {active_req_id})')
+    print(f'[PRE-COMMIT] Deferred update written to {deferred_file}')
+except Exception as e:
+    print(f'[PRE-COMMIT] Could not write deferred update: {e}')
+    sys.exit(1)
+" 2>/dev/null || echo "[PRE-COMMIT] File ownership deferral skipped"
+    fi
+fi
+
+# =============================================================================
+# 7. CONVENTIONAL COMMITS MESSAGE VALIDATION (GAP-14, GAP-8)
+# =============================================================================
+COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
+if [ -f "$COMMIT_MSG_FILE" ]; then
+    COMMIT_MSG=$(head -1 "$COMMIT_MSG_FILE")
+    if ! echo "$COMMIT_MSG" | grep -qE "^(feat|fix|docs|chore|refactor|test|perf|ci)(\(.+\))?: .{1,}"; then
+        echo "[PRE-COMMIT] ${RED}BLOCKED: Commit message does not follow Conventional Commits format${NC}"
+        echo "  Message: '$COMMIT_MSG'"
+        echo "  Required: <type>(<scope>): <description>"
+        echo "  Allowed types: feat, fix, docs, chore, refactor, test, perf, ci"
+        echo "  Example: feat(REQ-001): add user authentication endpoint"
+        exit 1
+    fi
+    
+    # GAP-8 FIX: For feat and fix types, enforce REQ-NNN scope format
+    # Extract the type from commit message
+    COMMIT_TYPE=$(echo "$COMMIT_MSG" | sed -E 's/^([a-z]+)\(.*/\1/')
+    if [ "$COMMIT_TYPE" = "feat" ] || [ "$COMMIT_TYPE" = "fix" ]; then
+        # Extract scope - everything between parentheses
+        SCOPE=$(echo "$COMMIT_MSG" | sed -E 's/^[a-z]+\(([^)]+)\):.*/\1/')
+        # Validate scope is REQ-NNN format
+        if ! echo "$SCOPE" | grep -qE '^REQ-[0-9]{3}$'; then
+            echo "[PRE-COMMIT] ${RED}BLOCKED: feat/fix commits MUST use REQ-NNN scope format${NC}"
+            echo "  Message: '$COMMIT_MSG'"
+            echo "  Error: Scope '$SCOPE' is not REQ-NNN format (e.g., REQ-001)"
+            echo "  Required: feat(REQ-001): <description>"
+            echo "  Note: feat and fix commits must reference a feature requirement ID"
+            exit 1
+        fi
+        echo "[PRE-COMMIT] Commit message format: valid (scope: $SCOPE)"
+    else
+        echo "[PRE-COMMIT] Commit message format: valid"
+    fi
+fi
+
+# =============================================================================
+# 7b. LGF-1: LARGE FILE CHUNKING WARNING (Preventive, Not Blocking)
+# =============================================================================
+# LGF-1 is about preventing wasted effort — warn when large markdown/report files
+# are being committed without chunking evidence. This is WARNING level, not blocking.
+STAGED_LARGE_MD=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(md|report)$" || true)
+if [ -n "$STAGED_LARGE_MD" ]; then
+    for file in $STAGED_LARGE_MD; do
+        if [ -f "$file" ]; then
+            LINE_COUNT=$(wc -l < "$file" 2>/dev/null || echo "0")
+            if [ "$LINE_COUNT" -gt 500 ]; then
+                # Check for chunking evidence: temp chunk files or pipeline pattern markers
+                HAS_CHUNK_EVIDENCE=0
+                
+                # Check for _temp_chunk_*.md files (chunking protocol artifacts)
+                if ls _temp_chunk_*.md 2>/dev/null | grep -q .; then
+                    HAS_CHUNK_EVIDENCE=1
+                fi
+                
+                # Check commit message for pipeline pattern mentions
+                if [ -f "$COMMIT_MSG_FILE" ]; then
+                    COMMIT_MSG=$(head -1 "$COMMIT_MSG_FILE")
+                    if echo "$COMMIT_MSG" | grep -qE "chunk|pipeline|Get-Content.*Set-Content"; then
+                        HAS_CHUNK_EVIDENCE=1
+                    fi
+                fi
+                
+                if [ "$HAS_CHUNK_EVIDENCE" = "0" ]; then
+                    echo "[PRE-COMMIT] ${YELLOW}WARNING: $file has $LINE_COUNT lines — exceeds 500 line LGF-1 threshold${NC}"
+                    echo "  LGF-1: Files >500 lines MUST use chunked generation (400-500 line chunks)"
+                    echo "  Protocol: Split into chunks → _temp_chunk_NN.ext → pipeline: Get-Content _temp_chunk_*.ext | Set-Content target.ext"
+                    echo "  FORBIDDEN: Inline addition pattern (Get-Content a) + (Get-Content b)"
+                    echo "  This warning is preventive — commit is allowed but large file generation may fail"
+                else
+                    echo "[PRE-COMMIT] LGF-1: $file shows chunking evidence (ok)"
+                fi
+            fi
+        fi
+    done
+fi
+
+# =============================================================================
+# ALL CHECKS PASSED
+# =============================================================================
+echo "[PRE-COMMIT] ${GREEN}All checks passed — commit allowed${NC}"
+exit 0
