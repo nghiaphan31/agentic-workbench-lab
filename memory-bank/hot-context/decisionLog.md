@@ -69,6 +69,20 @@
 
 ---
 
+## ADR-007: Inbox Intake and Reminder Rules Not Codified in .clinerules
+
+- **Date:** 2026-04-27
+- **Context:** The Inbox flow (capturing off-topic "shower thought" ideas to `_inbox/` with `@draft` tag) exists in `Agentic Workbench v2 - Draft.md` specifications and in test files (`tests/workbench/test_inbox_flow.py`) but is NOT explicitly codified as a behavioral rule in `.clinerules`. The only mention is in Section 14.1 (Pivot Protocol) as a contrast: "This differs from the Inbox flow (which handles new, lower-priority ideas)."
+- **Decision:** Create a new feature requirement (REQ-001) to add explicit inbox intake and reminder rules to `.clinerules`. The rules include:
+  - INB-1: Off-Topic Intake — agent MUST capture unrelated ideas to `_inbox/{slug}.md` with `@draft` tag
+  - INB-2: Session Start Reminder — agent MUST remind about pending inbox items at session start
+  - INB-3: Inbox Promotion — approved items get REQ-ID and moved to `features/`
+  - INB-4: Inbox Rejection — rejected items remain in `_inbox/` tagged as `REJECTED`
+- **Consequences:** Human users can confidently share off-topic ideas knowing they will be captured and reminded about later. The workbench behavior becomes explicit rather than implied.
+- **Artifact:** Feature file created at `plans/REQ-001-inbox-intake-reminder.md`
+
+---
+
 ## Adding New ADRs
 
 When a significant architectural decision is made:

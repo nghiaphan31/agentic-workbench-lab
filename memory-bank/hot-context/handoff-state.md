@@ -1,5 +1,47 @@
 # Handoff State
 
+## Handoff: Implementation Complete (2026-04-27)
+
+- **REQ-ID:** REQ-001 (Inbox Intake and Reminder)
+- **Status:** IMPLEMENTED + ENFORCED
+
+## Completed
+
+- ✅ Created feature specification: `plans/REQ-001-inbox-intake-reminder.md`
+- ✅ Documented decision as ADR-007 in `decisionLog.md`
+- ✅ Added Section 15 "Inbox Flow (Off-Topic Ideas)" to root `.clinerules`
+- ✅ Added Section 15 "Inbox Flow (Off-Topic Ideas)" to `agentic-workbench-engine/.clinerules` (kept in sync)
+- ✅ Added enforcement to `arbiter_check.py`:
+  - `check_inbox_intake()` — verifies inbox items have @draft tag
+  - `check_inbox_reminder()` — verifies inbox was acknowledged at session start
+  - Both added to CHECK_REGISTRY and SESSION_CHECKS
+- Rules implemented: INB-1 (Intake), INB-2 (Reminder), INB-3 (Promotion), INB-4 (Rejection)
+
+## Enforcement Status
+
+| Rule | Enforcement Mechanism | Level |
+|------|---------------------|-------|
+| INB-1 (Intake) | `arbiter_check.py` verifies @draft tagging | WARNING |
+| INB-2 (Reminder) | `arbiter_check.py` verifies inbox acknowledgment at session start | WARNING |
+| INB-3 (Promotion) | Manual promotion by Architect Agent | N/A |
+| INB-4 (Rejection) | Manual rejection tag in inbox | N/A |
+
+## What This Means for You
+
+You can now use the inbox flow immediately:
+
+1. **Capture off-topic ideas:** When you have a "shower thought" unrelated to current work, just tell me and I'll capture it to `_inbox/{slug}.md` with `@draft` tag
+2. **Session reminders:** At the start of each session, I'll remind you about pending inbox items
+3. **Enforcement:** The `arbiter_check.py` scan will warn if inbox items aren't properly tagged or acknowledged
+
+## Architecture Clarification (per your feedback)
+
+- **Lab repo (`/`)**: Where we BUILD and evolve the workbench engine
+- **Engine submodule (`agentic-workbench-engine/`)**: Canonical engine that gets injected into app repos via `workbench-cli.py init/upgrade`
+- Both `.clinerules` files are kept in sync per the note in line 8
+
+---
+
 ## Handoff: Orchestrator → Next Agent
 
 - **REQ-ID:** REQ-HONOR-ENFORCEMENT (honor rules enforcement complete)
